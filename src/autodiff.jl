@@ -1,15 +1,26 @@
-function ChainRulesCore.rrule(::typeof(tr), x::DualMatrix{T}) where T
-    d = size(x, 1)
-    function tr_pullback(ΔΩ)
-        return (NoTangent(), Tangent{DualMatrix{T}}(; value = Diagonal(fill(ΔΩ.value, d)), epsilon = Diagonal(fill(ΔΩ.epsilon, d))))
+function ChainRulesCore.rrule(::Type{HyperDualArray}, x, y, z, w)
+    function hyperdualarray_pullback(ΔΩ)
+        (NoTangent(), hyperrealpart(ΔΩ), ɛ₁part(ΔΩ), ɛ₂part(ΔΩ), ɛ₁ε₂part(ΔΩ))
     end
-    tr(x), tr_pullback
+    HyperDualArray(x, y, z, w), hyperdualarray_pullback
 end
 
-function ChainRulesCore.rrule(::typeof(tr), x::HyperDualMatrix{T}) where T
-    d = size(x, 1)
-    function tr_pullback(ΔΩ)
-        return (NoTangent(), Tangent{HyperDualMatrix{T}}(; value = Diagonal(fill(ΔΩ.value, d)), epsilon1 = Diagonal(fill(ΔΩ.epsilon1, d)), epsilon2 = Diagonal(fill(ΔΩ.epsilon2, d)), epsilon12 = Diagonal(fill(ΔΩ.epsilon12, d))))
+function ChainRulesCore.rrule(::typeof(hyperrealpart), x::HyperDual)
+    function hyperrealpart_pullback(ΔΩ)
+        (NoTangent(), HyperDual(ΔΩ))
     end
-    tr(x), tr_pullback
+    hyperrealpart(x), hyperrealpart_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(hyperrealpart), x::HyperDualArray)
+    function hyperrealpart_pullback(ΔΩ)
+        (NoTangent(), HyperDualArray(ΔΩ))
+    end
+    hyperrealpart(x), hyperrealpart_pullback
+end
+
+Zygote.@adjoint function LinearAlgebra.tr(x::HyperDualMatrix)
+    tr(x), function (Δ)
+        (HyperDualArray(Diagonal(Fill(Δ.value, (size(x, 1), ))), Diagonal(Fill(Δ.epsilon1, (size(x, 1), ))), Diagonal(Fill(Δ.epsilon2, (size(x, 1), ))), Diagonal(Fill(Δ.epsilon12, (size(x, 1), )))),)
+    end
 end

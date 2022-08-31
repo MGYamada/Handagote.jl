@@ -1,22 +1,22 @@
-mutable struct HyperDualArray{T <: NumberOrDual, N} <: AbstractDualArray{HyperDual{T}, N}
+mutable struct HyperDualArray{T <: ReComp, N} <: AbstractArray{HyperDual{T}, N}
     value::Array{T, N}
     epsilon1::Array{T, N}
     epsilon2::Array{T, N}
     epsilon12::Array{T, N}
-    function HyperDualArray{T, N}(A::Array{T, N}, B::Array{T, N}, C::Array{T, N}, D::Array{T, N}) where {T <: NumberOrDual, N}
+    function HyperDualArray{T, N}(A::AbstractArray{T, N}, B::AbstractArray{T, N}, C::AbstractArray{T, N}, D::AbstractArray{T, N}) where {T <: ReComp, N}
         @assert size(A) == size(B) == size(C) == size(D)
-        new(A, B, C, D)
+        new(convert(Array, A), convert(Array, B), convert(Array, C), convert(Array, D))
     end
 end
 
-HyperDualArray{T, N}(A::AbstractDualArray{Dual{T}, N}, B::AbstractDualArray{Dual{T}, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(realpart(A), εpart(A), realpart(B), εpart(B))
-HyperDualArray{T, N}(A::AbstractDualArray{Dual{T}, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(A, DualArray(zero.(realpart(A))))
-HyperDualArray(A::AbstractDualArray{Dual{T}, N}, B::AbstractDualArray{Dual{T}, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(A, B)
-HyperDualArray(A::AbstractDualArray{Dual{T}, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(A, DualArray(zero.(realpart(A))))
+HyperDualArray{T, N}(A::AbstractArray{Dual{T}, N}, B::AbstractArray{Dual{T}, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(realpart(A), εpart(A), realpart(B), εpart(B))
+HyperDualArray{T, N}(A::AbstractArray{Dual{T}, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(A, DualArray(zero.(realpart(A))))
+HyperDualArray(A::AbstractArray{Dual{T}, N}, B::AbstractArray{Dual{T}, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(A, B)
+HyperDualArray(A::AbstractArray{Dual{T}, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(A, DualArray(zero.(realpart(A))))
 
-HyperDualArray{T, N}(A::Array{T, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(A, zero.(A), zero.(A), zero.(A))
-HyperDualArray(A::Array{T, N}, B::Array{T, N}, C::Array{T, N}, D::Array{T, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(A, B, C, D)
-HyperDualArray(A::Array{T, N}) where {T <: NumberOrDual, N} = HyperDualArray{T, N}(A, zero.(A), zero.(A), zero.(A))
+HyperDualArray{T, N}(A::AbstractArray{T, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(A, zero.(A), zero.(A), zero.(A))
+HyperDualArray(A::AbstractArray{T, N}, B::AbstractArray{T, N}, C::AbstractArray{T, N}, D::AbstractArray{T, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(A, B, C, D)
+HyperDualArray(A::AbstractArray{T, N}) where {T <: ReComp, N} = HyperDualArray{T, N}(A, zero.(A), zero.(A), zero.(A))
 
 const HyperDualVector{T} = HyperDualArray{T, 1}
 const HyperDualMatrix{T} = HyperDualArray{T, 2}
@@ -29,33 +29,33 @@ hyperrealpart(h::HyperDualArray) = h.value
 ɛ₂part(h::HyperDualArray) = h.epsilon2
 ɛ₁ε₂part(h::HyperDualArray) = h.epsilon12
 
-hyperrealpart(d::AbstractDualArray) = realpart(d)
-ɛ₁part(d::AbstractDualArray) = εpart(d)
-ɛ₂part(d::AbstractDualArray) = zero.(typeof.(realpart(d)))
-ɛ₁ε₂part(x::AbstractDualArray) = zero.(typeof.(realpart(d)))
+hyperrealpart(d::DualArray) = realpart(d)
+ɛ₁part(d::DualArray) = εpart(d)
+ɛ₂part(d::DualArray) = zero.(typeof.(realpart(d)))
+ɛ₁ε₂part(d::DualArray) = zero.(typeof.(realpart(d)))
 
-hyperrealpart(x::AbstractArrayOrDualArray) = x
-ɛ₁part(x::AbstractArrayOrDualArray) = zero.(typeof.(x))
-ɛ₂part(x::AbstractArrayOrDualArray) = zero.(typeof.(x))
-ɛ₁ε₂part(x::AbstractArrayOrDualArray) = zero.(typeof.(x))
+hyperrealpart(x::AbstractArray) = x
+ɛ₁part(x::AbstractArray) = zero.(typeof.(x))
+ɛ₂part(x::AbstractArray) = zero.(typeof.(x))
+ɛ₁ε₂part(x::AbstractArray) = zero.(typeof.(x))
 
 ishyperdualarray(::HyperDualArray) = true
-ishyperdualarray(::AbstractArrayOrDualArray) = false
+ishyperdualarray(::AbstractArray) = false
 
-Base.copy(A::HyperDualArray) = HyperDualArray(copy(realpart(A)), copy(εpart(A)))
+Base.size(A::HyperDualArray) = size(hyperrealpart(A))
 
 Base.similar(A::HyperDualArray) = HyperDualArray(similar(realpart(A)), similar(εpart(A)))
-Base.similar(A::HyperDualArray, dims::Vararg{Union{Integer, AbstractUnitRange}}) = HyperDualArray(similar(realpart(A), dims), similar(εpart(A), dims...))
-Base.similar(A::HyperDualArray, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) = HyperDualArray(similar(realpart(A), dims), similar(εpart(A), dims))
-Base.similar(A::AbstractArrayOrDualArray, ::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: AbstractDual = HyperDualArray(similar(realpart(A), T, dims...), similar(εpart(A), T, dims...))
-Base.similar(A::AbstractArrayOrDualArray, ::Type{Dual{T}}, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) where T <: AbstractDual = HyperDualArray(similar(realpart(A), T, dims...), similar(εpart(A), T, dims...))
+Base.similar(A::HyperDualArray, dims::Vararg{Union{Integer, AbstractUnitRange}}) = HyperDualArray(similar(hyperrealpart(A), dims))
+Base.similar(A::HyperDualArray, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) = HyperDualArray(similar(hyperrealpart(A), dims))
+Base.similar(A::AbstractArray, ::Type{HyperDual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T = HyperDualArray(similar(hyperrealpart(A), T, dims...))
+# Base.similar(A::AbstractArray, ::Type{HyperDual{T}}, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) where T = HyperDualArray(similar(hyperrealpart(A), T, dims...))
 
-Base.ones(::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: AbstractDual = HyperDualArray(ones(dualtype(T), dims...))
-Base.ones(::Type{Dual{T}}, dims::Tuple{Vararg{Integer, N}}) where {T <: AbstractDual, N} = HyperDualArray(ones(dualtype(T), dims))
-Base.ones(::Type{Dual{T}}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: AbstractDual, N} = HyperDualArray(ones(dualtype(T), dims))
-Base.zeros(::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: AbstractDual = HyperDualArray(zeros(dualtype(T), dims...))
-Base.zeros(::Type{Dual{T}}, dims::Tuple{Vararg{Integer, N}}) where {T <: AbstractDual, N} = HyperDualArray(zeros(dualtype(T), dims))
-Base.zeros(::Type{Dual{T}}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: AbstractDual, N} = HyperDualArray(zeros(dualtype(T), dims))
+Base.ones(::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: Dual = HyperDualArray(ones(dualtype(T), dims...))
+Base.ones(::Type{Dual{T}}, dims::Tuple{Vararg{Integer, N}}) where {T <: Dual, N} = HyperDualArray(ones(dualtype(T), dims))
+Base.ones(::Type{Dual{T}}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: Dual, N} = HyperDualArray(ones(dualtype(T), dims))
+Base.zeros(::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: Dual = HyperDualArray(zeros(dualtype(T), dims...))
+Base.zeros(::Type{Dual{T}}, dims::Tuple{Vararg{Integer, N}}) where {T <: Dual, N} = HyperDualArray(zeros(dualtype(T), dims))
+Base.zeros(::Type{Dual{T}}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: Dual, N} = HyperDualArray(zeros(dualtype(T), dims))
 
 Base.getindex(A::HyperDualArray, inds...) = HyperDual(getindex(hyperrealpart(A), inds...), getindex(ɛ₁part(A), inds...), getindex(ɛ₂part(A), inds...), getindex(ɛ₁ε₂part(A), inds...))
 
@@ -67,12 +67,12 @@ function Base.setindex!(A::HyperDualArray, X, inds...)
 end
 
 Base.:(==)(A::HyperDualArray, B::HyperDualArray) = realpart(A) == realpart(B)
-Base.:(==)(A::HyperDualArray, x::AbstractArrayOrDualArray) = realpart(A) == x
-Base.:(==)(x::AbstractArrayOrDualArray, h::HyperDualArray) = h == x
+Base.:(==)(A::HyperDualArray, x::AbstractArray) = realpart(A) == x
+Base.:(==)(x::AbstractArray, h::HyperDualArray) = h == x
 
 Base.isequal(A::HyperDualArray, B::HyperDualArray) = isequal(realpart(A), realpart(B)) && isequal(εpart(A), εpart(B))
-Base.isequal(A::HyperDualArray, x::AbstractArrayOrDualArray) = isequal(realpart(A), x) && isequal(εpart(A), zero(x))
-Base.isequal(x::AbstractArrayOrDualArray, A::HyperDualArray) = isequal(A, x)
+Base.isequal(A::HyperDualArray, x::AbstractArray) = isequal(realpart(A), x) && isequal(εpart(A), zero(x))
+Base.isequal(x::AbstractArray, A::HyperDualArray) = isequal(A, x)
 
 Base.:-(A::HyperDualArray) = HyperDualArray(-realpart(A), -εpart(A))
 Base.:-(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) - realpart(B), εpart(A) - εpart(B))
@@ -91,6 +91,10 @@ Base.:*(a::Number, B::HyperDualArray) = apply_linear_hyper(*, a, B)
 Base.:*(A::HyperDualArray, b::Number) = apply_linear_hyper(*, A, b)
 Base.:\(a::Number, B::HyperDualArray) = apply_linear_hyper(\, a, B)
 Base.:/(A::HyperDualArray, b::Number) = apply_linear_hyper(/, A, b)
+
+Base.:*(A::HyperDualMatrix, B::AbstractVector) = apply_linear_hyper(*, A, B)
+Base.:*(A::AbstractMatrix, B::HyperDualVector) = apply_linear_hyper(*, A, B)
+Base.:*(A::HyperDualMatrix, B::HyperDualVector) = apply_linear_hyper(*, A, B)
 
 Base.:*(A::HyperDualMatrix, B::AbstractMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::AbstractMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)

@@ -1,59 +1,57 @@
-abstract type AbstractDual{T} end
+const ReComp = Union{Real, Complex}
 
-const NumberOrDual = Union{Number, AbstractDual}
-
-mutable struct Dual{T <: NumberOrDual} <: AbstractDual{T}
+mutable struct Dual{T <: ReComp} <: Number
     value::T
     epsilon::T
 end
 
-Dual(x::S, y::T) where {S <: NumberOrDual, T <: NumberOrDual} = Dual(promote(x, y)...)
-Dual(x::NumberOrDual) = Dual(x, zero(x))
-Dual{T}(x::NumberOrDual) where T <: NumberOrDual = Dual{T}(T(x), zero(T))
+Dual(x::S, y::T) where {S <: ReComp, T <: ReComp} = Dual(promote(x, y)...)
+Dual(x::ReComp) = Dual(x, zero(x))
+Dual{T}(x::ReComp) where T <: ReComp = Dual{T}(T(x), zero(T))
 Dual() = Dual(false, false)
 
 const ɛ = Dual(false, true)
 
-Base.convert(::Type{AbstractDual{T}}, h::AbstractDual{T}) where {T <: NumberOrDual} = h
-Base.convert(::Type{AbstractDual{T}}, h::AbstractDual) where {T <: NumberOrDual} = Dual{T}(convert(T, realpart(h)), convert(T, ɛpart(h)))
-Base.convert(::Type{AbstractDual{T}}, x::NumberOrDual) where {T <: NumberOrDual} = Dual{T}(convert(T, x), convert(T, 0))
-Base.convert(::Type{T}, h::AbstractDual) where {T <: NumberOrDual} = (ɛpart(h) == 0 ? convert(T, realpart(h)) : throw(InexactError()))
+Base.convert(::Type{Dual{T}}, h::Dual{T}) where {T <: Number} = h
+Base.convert(::Type{Dual{T}}, h::Dual) where {T <: Number} = Dual{T}(convert(T, realpart(h)), convert(T, ɛpart(h)))
+Base.convert(::Type{Dual{T}}, x::Number) where {T <: Number} = Dual{T}(convert(T, x), convert(T, 0))
+Base.convert(::Type{T}, h::Dual) where {T <: Number} = (ɛpart(h) == 0 ? convert(T, realpart(h)) : throw(InexactError()))
 
-Base.promote_rule(::Type{AbstractDual{T}}, ::Type{Dual{S}}) where {T <: NumberOrDual, S <: NumberOrDual} = Dual{promote_type(T, S)}
-Base.promote_rule(::Type{AbstractDual{T}}, ::Type{S}) where {T <: NumberOrDual, S <: NumberOrDual} = Dual{promote_type(T, S)}
-Base.promote_rule(::Type{AbstractDual{T}}, ::Type{T}) where {T <: NumberOrDual} = Dual{T}
+Base.promote_rule(::Type{Dual{T}}, ::Type{Dual{S}}) where {T <: Number, S <: Number} = Dual{promote_type(T, S)}
+Base.promote_rule(::Type{Dual{T}}, ::Type{S}) where {T <: Number, S <: Number} = Dual{promote_type(T, S)}
+Base.promote_rule(::Type{Dual{T}}, ::Type{T}) where {T <: Number} = Dual{T}
 
-Base.widen(::Type{AbstractDual{T}}) where T = Dual{widen(T)}
+Base.widen(::Type{Dual{T}}) where T = Dual{widen(T)}
 
-realpart(h::AbstractDual) = h.value
-ɛpart(h::AbstractDual) = h.epsilon
-realpart(x::NumberOrDual) = x
-ɛpart(x::NumberOrDual) = zero(typeof(x))
+realpart(h::Dual) = h.value
+ɛpart(h::Dual) = h.epsilon
+realpart(x::Number) = x
+ɛpart(x::Number) = zero(typeof(x))
 
-Base.isnan(h::AbstractDual) = isnan(realpart(h))
-Base.isinf(h::AbstractDual) = isinf(realpart(h))
-Base.isfinite(h::AbstractDual) = isfinite(realpart(h))
-isdual(x::AbstractDual) = true
-isdual(x::NumberOrDual) = false
-Base.eps(h::AbstractDual) = eps(realpart(h))
-Base.eps(::Type{AbstractDual{T}}) where T = eps(T)
+Base.isnan(h::Dual) = isnan(realpart(h))
+Base.isinf(h::Dual) = isinf(realpart(h))
+Base.isfinite(h::Dual) = isfinite(realpart(h))
+isdual(x::Dual) = true
+isdual(x::Number) = false
+Base.eps(h::Dual) = eps(realpart(h))
+Base.eps(::Type{Dual{T}}) where T = eps(T)
 
-Base.convert(::Type{Dual}, h::AbstractDual) = h
-Base.convert(::Type{Dual}, x::NumberOrDual) = Dual(x)
+Base.convert(::Type{Dual}, h::Dual) = h
+Base.convert(::Type{Dual}, x::Number) = Dual(x)
 
-Base.:(==)(h₁::AbstractDual, h₂::AbstractDual) = realpart(h₁) == realpart(h₂)
-Base.:(==)(h::AbstractDual, x::NumberOrDual) = realpart(h) == x
-Base.:(==)(x::NumberOrDual, h::AbstractDual) = h == x
+Base.:(==)(h₁::Dual, h₂::Dual) = realpart(h₁) == realpart(h₂)
+Base.:(==)(h::Dual, x::Number) = realpart(h) == x
+Base.:(==)(x::Number, h::Dual) = h == x
 
-Base.isequal(h₁::AbstractDual, h₂::AbstractDual) = isequal(realpart(h₁), realpart(h₂)) && isequal(εpart(h₁), εpart(h₂))
-Base.isequal(h::AbstractDual, x::NumberOrDual) = isequal(realpart(h), x) && isequal(εpart(h), zero(x))
-Base.isequal(x::NumberOrDual, h::AbstractDual) = isequal(h, x)
+Base.isequal(h₁::Dual, h₂::Dual) = isequal(realpart(h₁), realpart(h₂)) && isequal(εpart(h₁), εpart(h₂))
+Base.isequal(h::Dual, x::Number) = isequal(realpart(h), x) && isequal(εpart(h), zero(x))
+Base.isequal(x::Number, h::Dual) = isequal(h, x)
 
-Base.isless(h₁::AbstractDual{T}, h₂::AbstractDual{T}) where {T <: Real} = realpart(h₁) < realpart(h₂)
-Base.isless(h₁::Real, h₂::AbstractDual{<:Real}) = h₁ < realpart(h₂)
-Base.isless(h₁::AbstractDual{<:Real}, h₂::Real) = realpart(h₁) < h₂
+Base.isless(h₁::Dual{T}, h₂::Dual{T}) where {T <: Real} = realpart(h₁) < realpart(h₂)
+Base.isless(h₁::Real, h₂::Dual{<:Real}) = h₁ < realpart(h₂)
+Base.isless(h₁::Dual{<:Real}, h₂::Real) = realpart(h₁) < h₂
 
-function Base.hash(h::AbstractDual) # Maybe this works
+function Base.hash(h::Dual) # Maybe this works
     x = hash(realpart(h))
     if isequal(h, realpart(h))
         return x
@@ -63,31 +61,31 @@ function Base.hash(h::AbstractDual) # Maybe this works
     end
 end
 
-Base.float(h::Union{AbstractDual{T}, AbstractDual{Complex{T}}}) where {T<:AbstractFloat} = h
-Base.complex(h::AbstractDual{<:Complex}) = h
-Base.complex(::Type{AbstractDual{T}}) where {T} = Dual{complex(T)}
+Base.float(h::Union{Dual{T}, Dual{Complex{T}}}) where {T<:AbstractFloat} = h
+Base.complex(h::Dual{<:Complex}) = h
+Base.complex(::Type{Dual{T}}) where {T} = Dual{complex(T)}
 
-Base.floor(h::AbstractDual) = floor(realpart(h))
-Base.ceil(h::AbstractDual)  = ceil(realpart(h))
-Base.trunc(h::AbstractDual) = trunc(realpart(h))
-Base.round(h::AbstractDual) = round(realpart(h))
-Base.floor(::Type{T}, h::AbstractDual) where {T<:Real} = floor(T, realpart(h))
-Base.ceil( ::Type{T}, h::AbstractDual) where {T<:Real} =  ceil(T, realpart(h))
-Base.trunc(::Type{T}, h::AbstractDual) where {T<:Real} = trunc(T, realpart(h))
-Base.round(::Type{T}, h::AbstractDual) where {T<:Real} = round(T, realpart(h))
+Base.floor(h::Dual) = floor(realpart(h))
+Base.ceil(h::Dual)  = ceil(realpart(h))
+Base.trunc(h::Dual) = trunc(realpart(h))
+Base.round(h::Dual) = round(realpart(h))
+Base.floor(::Type{T}, h::Dual) where {T<:Real} = floor(T, realpart(h))
+Base.ceil( ::Type{T}, h::Dual) where {T<:Real} =  ceil(T, realpart(h))
+Base.trunc(::Type{T}, h::Dual) where {T<:Real} = trunc(T, realpart(h))
+Base.round(::Type{T}, h::Dual) where {T<:Real} = round(T, realpart(h))
 
 for op in (:real, :imag, :conj, :float, :complex)
-    @eval Base.$op(z::AbstractDual) = Dual($op(realpart(z)), $op(εpart(z)))
+    @eval Base.$op(z::Dual) = Dual($op(realpart(z)), $op(εpart(z)))
 end
 
-Base.abs(z::AbstractDual) = sqrt(abs2(z))
-Base.abs2(z::AbstractDual) = real(conj(z) * z)
+Base.abs(z::Dual) = sqrt(abs2(z))
+Base.abs2(z::Dual) = real(conj(z) * z)
 
-Base.real(z::AbstractDual{<:Real}) = z
-Base.abs(z::AbstractDual{<:Real}) = z ≥ 0 ? z : -z
+Base.real(z::Dual{<:Real}) = z
+Base.abs(z::Dual{<:Real}) = z ≥ 0 ? z : -z
 
-Base.angle(z::AbstractDual{<:Real}) = z ≥ 0 ? zero(z) : one(z) * π
-function Base.angle(z::AbstractDual{Complex{T}}) where T <: Real
+Base.angle(z::Dual{<:Real}) = z ≥ 0 ? zero(z) : one(z) * π
+function Base.angle(z::Dual{Complex{T}}) where T <: Real
     if z == 0
         if imag(εpart(z)) == 0
             Dual(zero(T), zero(T))
@@ -99,50 +97,50 @@ function Base.angle(z::AbstractDual{Complex{T}}) where T <: Real
     end
 end
 
-Base.flipsign(x::AbstractDual, y::AbstractDual) = y == 0 ? flipsign(x, εpart(y)) : flipsign(x, realpart(y))
-Base.flipsign(x, y::AbstractDual) = y == 0 ? flipsign(x, εpart(y)) : flipsign(x, realpart(y))
-Base.flipsign(x::AbstractDual, y) = dual(flipsign(realpart(x), y), flipsign(εpart(x), y))
+Base.flipsign(x::Dual, y::Dual) = y == 0 ? flipsign(x, εpart(y)) : flipsign(x, realpart(y))
+Base.flipsign(x, y::Dual) = y == 0 ? flipsign(x, εpart(y)) : flipsign(x, realpart(y))
+Base.flipsign(x::Dual, y) = dual(flipsign(realpart(x), y), flipsign(εpart(x), y))
 
-Base.:+(h₁::AbstractDual, h₂::AbstractDual) = Dual(realpart(h₁) + realpart(h₂), εpart(h₁) + εpart(h₂))
-Base.:+(n::NumberOrDual, h::AbstractDual) = Dual(n + realpart(h), εpart(h))
-Base.:+(h::AbstractDual, n::NumberOrDual) = n + h
+Base.:+(h₁::Dual, h₂::Dual) = Dual(realpart(h₁) + realpart(h₂), εpart(h₁) + εpart(h₂))
+Base.:+(n::Number, h::Dual) = Dual(n + realpart(h), εpart(h))
+Base.:+(h::Dual, n::Number) = n + h
 
-Base.:-(h::AbstractDual) = Dual(-realpart(h), -εpart(h))
-Base.:-(h₁::AbstractDual, h₂::AbstractDual) = Dual(realpart(h₁) - realpart(h₂), εpart(h₁) - εpart(h₂))
-Base.:-(n::NumberOrDual, h::AbstractDual) = Dual(n - realpart(h), -εpart(h))
-Base.:-(h::AbstractDual, n::NumberOrDual) = Dual(realpart(h) - n, εpart(h))
+Base.:-(h::Dual) = Dual(-realpart(h), -εpart(h))
+Base.:-(h₁::Dual, h₂::Dual) = Dual(realpart(h₁) - realpart(h₂), εpart(h₁) - εpart(h₂))
+Base.:-(n::Number, h::Dual) = Dual(n - realpart(h), -εpart(h))
+Base.:-(h::Dual, n::Number) = Dual(realpart(h) - n, εpart(h))
 
 # avoid ambiguous definition
-Base.:*(x::Bool, h::AbstractDual) = ifelse(x, h, ifelse(signbit(real(realpart(h))) == 0, zero(h), -zero(h)))
-Base.:*(h::AbstractDual, x::Bool) = x * h
+Base.:*(x::Bool, h::Dual) = ifelse(x, h, ifelse(signbit(real(realpart(h))) == 0, zero(h), -zero(h)))
+Base.:*(h::Dual, x::Bool) = x * h
 
-function Base.:*(h₁::AbstractDual, h₂::AbstractDual)
+function Base.:*(h₁::Dual, h₂::Dual)
     x, y = realpart(h₁), εpart(h₁)
     a, b = realpart(h₂), εpart(h₂)
     return Dual(a*x, muladd(a, y, b*x))
 end
-Base.:*(n::NumberOrDual, h::AbstractDual) = Dual(n*realpart(h), n*εpart(h))
-Base.:*(h::AbstractDual, n::NumberOrDual) = n * h
+Base.:*(n::Number, h::Dual) = Dual(n*realpart(h), n*εpart(h))
+Base.:*(h::Dual, n::Number) = n * h
 
-Base.one(h::AbstractDual) = Dual(one(realpart(h)))
+Base.one(h::Dual) = Dual(one(realpart(h)))
 
-@inline Base.literal_pow(::typeof(^), x::AbstractDual, ::Val{0}) = one(typeof(x))
-@inline Base.literal_pow(::typeof(^), x::AbstractDual, ::Val{1}) = x
-@inline Base.literal_pow(::typeof(^), x::AbstractDual, ::Val{2}) = x * x
-@inline Base.literal_pow(::typeof(^), x::AbstractDual, ::Val{3}) = x * x * x
+@inline Base.literal_pow(::typeof(^), x::Dual, ::Val{0}) = one(typeof(x))
+@inline Base.literal_pow(::typeof(^), x::Dual, ::Val{1}) = x
+@inline Base.literal_pow(::typeof(^), x::Dual, ::Val{2}) = x * x
+@inline Base.literal_pow(::typeof(^), x::Dual, ::Val{3}) = x * x * x
 
-function Base.:/(h₁::AbstractDual, h₂::AbstractDual)
+function Base.:/(h₁::Dual, h₂::Dual)
     x, y = realpart(h₁), εpart(h₁)
     a, b = realpart(h₂), εpart(h₂)
     return Dual(x / a, y / a - b * x / a ^ 2)
 end
-function Base.:/(n::NumberOrDual, h::AbstractDual)
+function Base.:/(n::Number, h::Dual)
     x, y = realpart(h), ε₁part(h)
     return Dual(n / x, -n * y / x ^ 2)
 end
-Base.:/(h::AbstractDual, n::NumberOrDual) = Dual(realpart(h) / n, εpart(h) / n)
+Base.:/(h::Dual, n::Number) = Dual(realpart(h) / n, εpart(h) / n)
 
-Base.mod(h::AbstractDual, n::NumberOrDual) = Dual(mod(realpart(h), n), εpart(h))
+Base.mod(h::Dual, n::Number) = Dual(mod(realpart(h), n), εpart(h))
 
 # power
 
@@ -156,4 +154,4 @@ function to_nanmath(x::Expr)
 end
 to_nanmath(x) = x
 
-Base.checkindex(::Type{Bool}, inds::AbstractUnitRange, i::AbstractDual) = checkindex(Bool, inds, realpart(h))
+Base.checkindex(::Type{Bool}, inds::AbstractUnitRange, i::Dual) = checkindex(Bool, inds, realpart(h))

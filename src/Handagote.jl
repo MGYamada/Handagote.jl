@@ -3,7 +3,8 @@ module Handagote
 using LinearAlgebra
 using OMEinsum
 using Random
-using ChainRules, ChainRulesCore
+using ChainRulesCore
+using Zygote, FillArrays
 
 include("dual.jl")
 include("hyperdual.jl")
@@ -12,6 +13,7 @@ include("dualarray.jl")
 include("hyperdualarray.jl")
 include("einsum.jl")
 include("autodiff.jl")
+include("broadcast.jl")
 
 export @dualein_str, dualein, @hyperdualein_str, hyperdualein
 export AbstractDual, Dual, AbstractDualArray, DualArray, DualVector, DualMatrix
