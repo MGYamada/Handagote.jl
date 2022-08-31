@@ -7,7 +7,6 @@ mutable struct DualArray{T <: ReComp, N} <: AbstractArray{Dual{T}, N}
     end
 end
 
-DualArray{T, N}(A::AbstractArray{T, N}, B::AbstractArray{T, N}) where {T <: ReComp, N} = DualArray{T, N}(A, B)
 DualArray{T, N}(A::AbstractArray{T, N}) where {T <: ReComp, N} = DualArray{T, N}(A, zero.(A))
 DualArray(A::AbstractArray{T, N}, B::AbstractArray{T, N}) where {T <: ReComp, N} = DualArray{T, N}(A, B)
 DualArray(A::AbstractArray{T, N}) where {T <: ReComp, N} = DualArray{T, N}(A, zero.(A))
