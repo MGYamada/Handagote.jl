@@ -100,6 +100,17 @@ Base.:*(A::HyperDualMatrix, B::AbstractMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::AbstractMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::HyperDualMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 
+Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualVector) = hyperdualein"i, i -> "(conj(parent(A)), B)[]
+Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualMatrix, C::AbstractVector) = hyperdualein"i, ij, j -> "(conj(parent(A)), B, c)[]
+
+Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::HyperDualMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)
+Base.:*(A::HyperDualMatrix, B::Adjoint{T, <:AbstractMatrix} where T) = hyperdualein"ij, kj -> ik"(A, conj(parent(B)))
+
+Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{T, <:HyperDualMatrix} where T, B::AbstractVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{T, <:HyperDualMatrix} where T, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
+
 LinearAlgebra.tr(A::HyperDualMatrix) = HyperDual(tr(hyperrealpart(A)), tr(ɛ₁part(A)), tr(ɛ₂part(A)), tr(ɛ₁ε₂part(A)))
 
 Base.conj(A::HyperDualArray) = HyperDualArray(conj(hyperrealpart(A)), conj(ɛ₁part(A)), conj(ɛ₂part(A)), conj(ɛ₁ε₂part(A)))
