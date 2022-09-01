@@ -12,14 +12,14 @@ Dual() = Dual(false, false)
 
 const ɛ = Dual(false, true)
 
-Base.convert(::Type{Dual{T}}, h::Dual{T}) where {T <: Number} = h
-Base.convert(::Type{Dual{T}}, h::Dual) where {T <: Number} = Dual{T}(convert(T, realpart(h)), convert(T, ɛpart(h)))
-Base.convert(::Type{Dual{T}}, x::Number) where {T <: Number} = Dual{T}(convert(T, x), convert(T, 0))
-Base.convert(::Type{T}, h::Dual) where {T <: Number} = (ɛpart(h) == 0 ? convert(T, realpart(h)) : throw(InexactError()))
+Base.convert(::Type{Dual{T}}, h::Dual{T}) where {T <: ReComp} = h
+Base.convert(::Type{Dual{T}}, h::Dual) where {T <: ReComp} = Dual{T}(convert(T, realpart(h)), convert(T, ɛpart(h)))
+Base.convert(::Type{Dual{T}}, x::ReComp) where {T <: ReComp} = Dual{T}(convert(T, x), convert(T, 0))
+Base.convert(::Type{T}, h::Dual) where {T <: ReComp} = (ɛpart(h) == 0 ? convert(T, realpart(h)) : throw(InexactError()))
 
-Base.promote_rule(::Type{Dual{T}}, ::Type{Dual{S}}) where {T <: Number, S <: Number} = Dual{promote_type(T, S)}
-Base.promote_rule(::Type{Dual{T}}, ::Type{S}) where {T <: Number, S <: Number} = Dual{promote_type(T, S)}
-Base.promote_rule(::Type{Dual{T}}, ::Type{T}) where {T <: Number} = Dual{T}
+Base.promote_rule(::Type{Dual{T}}, ::Type{Dual{S}}) where {T <: ReComp, S <: ReComp} = Dual{promote_type(T, S)}
+Base.promote_rule(::Type{Dual{T}}, ::Type{S}) where {T <: ReComp, S <: ReComp} = Dual{promote_type(T, S)}
+Base.promote_rule(::Type{Dual{T}}, ::Type{T}) where {T <: ReComp} = Dual{T}
 
 Base.widen(::Type{Dual{T}}) where T = Dual{widen(T)}
 
