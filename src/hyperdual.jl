@@ -5,9 +5,12 @@ mutable struct HyperDual{T <: ReComp} <: Number
     epsilon12::T
 end
 
-HyperDual(x::S, y::T, z::U, w::V) where {S <: ReComp, T <: ReComp, U <: ReComp, V <: ReComp} = HyperDual(promote(x, y, z, w)...)
+HyperDual(x::Dual, y::Dual) = HyperDual(realpart(x), εpart(x), realpart(y), εpart(y))
+HyperDual{T}(x::Dual, y::Dual) where T <: ReComp = HyperDual{T}(T(realpart(x)), T(εpart(x)), T(realpart(y)), T(εpart(y)))
 HyperDual(x::Dual) = HyperDual(realpart(x), εpart(x), zero(x), zero(x))
 HyperDual{T}(x::Dual) where T <: ReComp = HyperDual{T}(T(realpart(x)), T(εpart(x)), zero(T), zero(T))
+
+HyperDual(x::S, y::T, z::U, w::V) where {S <: ReComp, T <: ReComp, U <: ReComp, V <: ReComp} = HyperDual(promote(x, y, z, w)...)
 HyperDual(x::ReComp) = HyperDual(x, zero(x), zero(x), zero(x))
 HyperDual{T}(x::ReComp) where T <: ReComp = HyperDual{T}(T(x), zero(T), zero(T), zero(T))
 
@@ -41,7 +44,7 @@ hyperrealpart(h::HyperDual) = h.value
 ɛ₁ε₂part(h::HyperDual) = h.epsilon12
 
 hyperrealpart(d::Dual) = realpart(d)
-ɛ₁part(d::Dual) = εpart(d)
+ɛ₁part(d::Dual) = ɛpart(d)
 ɛ₂part(d::Dual) = zero(typeof(realpart(d)))
 ɛ₁ε₂part(x::Dual) = zero(typeof(realpart(d)))
 

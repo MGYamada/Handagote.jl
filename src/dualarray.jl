@@ -78,6 +78,17 @@ Base.:*(A::DualMatrix, B::AbstractMatrix) = apply_linear(*, A, B)
 Base.:*(A::AbstractMatrix, B::DualMatrix) = apply_linear(*, A, B)
 Base.:*(A::DualMatrix, B::DualMatrix) = apply_linear(*, A, B)
 
+Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualVector) = dualein"i, i -> "(conj(parent(A)), B)[]
+Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualMatrix, C::AbstractVector) = dualein"i, ij, j -> "(conj(parent(A)), B, C)[]
+
+Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)
+Base.:*(A::DualMatrix, B::Adjoint{T, <:AbstractMatrix} where T) = dualein"ij, kj -> ik"(A, conj(parent(B)))
+
+Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{T, <:DualMatrix} where T, B::AbstractVector) = dualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{T, <:DualMatrix} where T, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
+
 LinearAlgebra.tr(A::DualMatrix) = Dual(tr(realpart(A)), tr(εpart(A)))
 
 Base.conj(A::DualArray) = DualArray(conj(realpart(A)), conj(εpart(A)))

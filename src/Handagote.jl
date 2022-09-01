@@ -9,9 +9,9 @@ using Zygote, FillArrays
 include("dual.jl")
 include("hyperdual.jl")
 include("rand.jl")
+include("einsum.jl")
 include("dualarray.jl")
 include("hyperdualarray.jl")
-include("einsum.jl")
 include("autodiff.jl")
 include("broadcast.jl")
 
