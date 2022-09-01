@@ -2,6 +2,9 @@
 
 Experimental forward-mode AD library for tensor networks.
 
+Hadagote = Handai + Zygote. This is because the library was created
+when the author was in Handai (Osaka University) in Japan.
+
 Compatible with OMEinsum.jl, Zygote.jl, etc.
 The implementation is following HyperDualNumbers.jl.
 https://github.com/JuliaDiff/HyperDualNumbers.jl
@@ -24,3 +27,11 @@ and `@hyperdualein_str` notation `hyperdualein"ij, jk, klm -> ilm"(A, B, C)`.
 
 Zygote over Handagote implementation of MPRG is a temporal ad-hoc solution.
 In the future, we will change everything to Diffractor.jl backend.
+
+## License
+
+MIT
+
+## Author
+
+* Masahiko G. Yamada
