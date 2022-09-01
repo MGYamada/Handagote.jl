@@ -111,3 +111,11 @@ Zygote.@adjoint function LinearAlgebra.tr(x::HyperDualMatrix)
         ((; value = Diagonal(Fill(Δ.value, (size(x, 1), ))), epsilon1 = Diagonal(Fill(Δ.epsilon1, (size(x, 1), ))), epsilon2 = Diagonal(Fill(Δ.epsilon2, (size(x, 1), ))), epsilon12 = Diagonal(Fill(Δ.epsilon12, (size(x, 1), )))),)
     end
 end
+
+Zygote.@adjoint function Base.reshape(xs::DualArray, dims...)
+    reshape(xs, dims...), Δ -> ((; value = reshape(Δ.value, size(xs)), epsilon = reshape(Δ.epsilon, size(xs))), map(_ -> nothing, dims)...)
+end
+
+Zygote.@adjoint function Base.reshape(xs::HyperDualArray, dims...)
+    reshape(xs, dims...), Δ -> ((; value = reshape(Δ.value, size(xs)), epsilon1 = reshape(Δ.epsilon1, size(xs)), epsilon2 = reshape(Δ.epsilon2, size(xs)), epsilon12 = reshape(Δ.epsilon12, size(xs))), map(_ -> nothing, dims)...)
+end
