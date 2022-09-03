@@ -1,4 +1,4 @@
-mutable struct HyperDualArray{T <: ReComp, N} <: AbstractArray{HyperDual{T}, N}
+struct HyperDualArray{T <: ReComp, N} <: DenseArray{HyperDual{T}, N}
     value::Array{T, N}
     epsilon1::Array{T, N}
     epsilon2::Array{T, N}
@@ -41,6 +41,8 @@ hyperrealpart(x::AbstractArray) = x
 
 ishyperdualarray(::HyperDualArray) = true
 ishyperdualarray(::AbstractArray) = false
+isdualarray(::HyperDual) = true
+isdualarray(::Number) = false
 
 Base.size(A::HyperDualArray) = size(hyperrealpart(A))
 
@@ -80,11 +82,15 @@ Base.:-(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) - rea
 Base.:+(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) + realpart(B), εpart(A) + εpart(B))
 
 function apply_linear_hyper(f, args::Vararg{Any, N}; kwargs...) where N
-    HyperDualArray(f(map(hyperrealpart, args)...; kwargs...), sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
-    sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₂part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
-    sum(i -> sum(j -> i < j ? f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : j - 1])..., ɛ₂part(args[j]), map(hyperrealpart, args[j + 1 : end])...,; kwargs...) :
-    (i > j ? f(map(hyperrealpart, args[1 : j - 1])..., ɛ₂part(args[j]), map(hyperrealpart, args[j + 1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...) :
-    f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁ɛ₂part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...)), 1 : N), 1 : N))
+    if any(ishyperdualarray, args)
+        HyperDualArray(f(map(hyperrealpart, args)...; kwargs...), sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
+        sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₂part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
+        sum(i -> sum(j -> i < j ? f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : j - 1])..., ɛ₂part(args[j]), map(hyperrealpart, args[j + 1 : end])...,; kwargs...) :
+        (i > j ? f(map(hyperrealpart, args[1 : j - 1])..., ɛ₂part(args[j]), map(hyperrealpart, args[j + 1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...) :
+        f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁ɛ₂part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...)), 1 : N), 1 : N))
+    else
+        apply_linear(f, args...; kwargs...) 
+    end
 end
 
 Base.:*(a::Number, B::HyperDualArray) = apply_linear_hyper(*, a, B)
@@ -101,7 +107,6 @@ Base.:*(A::AbstractMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::HyperDualMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 
 Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualVector) = hyperdualein"i, i -> "(conj(parent(A)), B)[]
-Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualMatrix, C::AbstractVector) = hyperdualein"i, ij, j -> "(conj(parent(A)), B, c)[]
 
 Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::HyperDualMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)

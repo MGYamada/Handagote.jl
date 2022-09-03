@@ -1,4 +1,4 @@
-mutable struct DualArray{T <: ReComp, N} <: AbstractArray{Dual{T}, N}
+struct DualArray{T <: ReComp, N} <: DenseArray{Dual{T}, N}
     value::Array{T, N}
     epsilon::Array{T, N}
     function DualArray{T, N}(A::AbstractArray{T, N}, B::AbstractArray{T, N}) where {T <: ReComp, N}
@@ -21,6 +21,8 @@ realpart(x::AbstractArray) = x
 
 isdualarray(::DualArray) = true
 isdualarray(::AbstractArray) = false
+isdualarray(::Dual) = true
+isdualarray(::Number) = false
 
 Base.size(A::DualArray) = size(realpart(A))
 
@@ -62,7 +64,11 @@ Base.:-(A::DualArray, B::DualArray) = DualArray(realpart(A) - realpart(B), εpar
 Base.:+(A::DualArray, B::DualArray) = DualArray(realpart(A) + realpart(B), εpart(A) + εpart(B))
 
 function apply_linear(f, args::Vararg{Any, N}; kwargs...) where N
-    DualArray(f(map(realpart, args)...; kwargs...), sum(map(i -> f(map(realpart, args[1 : i - 1])..., εpart(args[i]), map(realpart, args[i + 1 : end])...,; kwargs...), 1 : N)))
+    if any(isdualarray, args)
+        DualArray(f(map(realpart, args)...; kwargs...), sum(map(i -> f(map(realpart, args[1 : i - 1])..., εpart(args[i]), map(realpart, args[i + 1 : end])...,; kwargs...), 1 : N)))
+    else
+        f(args...; kwargs...)
+    end
 end
 
 Base.:*(a::Number, B::DualArray) = apply_linear(*, a, B)
@@ -79,7 +85,6 @@ Base.:*(A::AbstractMatrix, B::DualMatrix) = apply_linear(*, A, B)
 Base.:*(A::DualMatrix, B::DualMatrix) = apply_linear(*, A, B)
 
 Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualVector) = dualein"i, i -> "(conj(parent(A)), B)[]
-Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualMatrix, C::AbstractVector) = dualein"i, ij, j -> "(conj(parent(A)), B, C)[]
 
 Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)

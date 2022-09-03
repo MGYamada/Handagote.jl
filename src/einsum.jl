@@ -21,13 +21,13 @@ macro hyperdualein_str(s::AbstractString)
 end
 
 struct HyperDualStaticEinCode{LT}
-    code::StaticEinCode{LT}
+    code::DualStaticEinCode{LT}
 end
 
 code(c::HyperDualStaticEinCode) = c.code
 
 function hyperdualein(s::AbstractString)
-    HyperDualStaticEinCode(ein(s))
+    HyperDualStaticEinCode(dualein(s))
 end
 
 function (c::HyperDualStaticEinCode{LT})(xs...; kwargs...) where LT

@@ -1,4 +1,4 @@
-mutable struct HyperDual{T <: ReComp} <: Number
+struct HyperDual{T <: ReComp} <: Number
     value::T
     epsilon1::T
     epsilon2::T
