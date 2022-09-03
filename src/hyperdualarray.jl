@@ -46,18 +46,20 @@ isdualarray(::Number) = false
 
 Base.size(A::HyperDualArray) = size(hyperrealpart(A))
 
+hyperdualtype(::Type{HyperDual{T}}) where T = T
+
 Base.similar(A::HyperDualArray) = HyperDualArray(similar(realpart(A)), similar(εpart(A)))
 Base.similar(A::HyperDualArray, dims::Vararg{Union{Integer, AbstractUnitRange}}) = HyperDualArray(similar(hyperrealpart(A), dims))
 Base.similar(A::HyperDualArray, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) = HyperDualArray(similar(hyperrealpart(A), dims))
 Base.similar(A::AbstractArray, ::Type{HyperDual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T = HyperDualArray(similar(hyperrealpart(A), T, dims...))
 # Base.similar(A::AbstractArray, ::Type{HyperDual{T}}, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) where T = HyperDualArray(similar(hyperrealpart(A), T, dims...))
 
-Base.ones(::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: Dual = HyperDualArray(ones(dualtype(T), dims...))
-Base.ones(::Type{Dual{T}}, dims::Tuple{Vararg{Integer, N}}) where {T <: Dual, N} = HyperDualArray(ones(dualtype(T), dims))
-Base.ones(::Type{Dual{T}}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: Dual, N} = HyperDualArray(ones(dualtype(T), dims))
-Base.zeros(::Type{Dual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: Dual = HyperDualArray(zeros(dualtype(T), dims...))
-Base.zeros(::Type{Dual{T}}, dims::Tuple{Vararg{Integer, N}}) where {T <: Dual, N} = HyperDualArray(zeros(dualtype(T), dims))
-Base.zeros(::Type{Dual{T}}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: Dual, N} = HyperDualArray(zeros(dualtype(T), dims))
+Base.ones(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: HyperDual = DualArray(ones(hyperdualtype(T), dims...))
+Base.ones(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = DualArray(ones(hyperdualtype(T), dims))
+Base.ones(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = DualArray(ones(hyperdualtype(T), dims))
+Base.zeros(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: HyperDual = DualArray(zeros(hyperdualtype(T), dims...))
+Base.zeros(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = DualArray(zeros(hyperdualtype(T), dims))
+Base.zeros(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = DualArray(zeros(hyperdualtype(T), dims))
 
 Base.getindex(A::HyperDualArray, inds...) = HyperDual(getindex(hyperrealpart(A), inds...), getindex(ɛ₁part(A), inds...), getindex(ɛ₂part(A), inds...), getindex(ɛ₁ε₂part(A), inds...))
 
@@ -81,6 +83,18 @@ Base.:-(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) - rea
 
 Base.:+(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) + realpart(B), εpart(A) + εpart(B))
 
+function apply_scalar_hyper(f, args::Vararg{Any, N}; kwargs...) where N
+    if any(ishyperdualarray, args)
+        HyperDual(f(map(hyperrealpart, args)...; kwargs...), sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
+        sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₂part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
+        sum(i -> sum(j -> i < j ? f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : j - 1])..., ɛ₂part(args[j]), map(hyperrealpart, args[j + 1 : end])...,; kwargs...) :
+        (i > j ? f(map(hyperrealpart, args[1 : j - 1])..., ɛ₂part(args[j]), map(hyperrealpart, args[j + 1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...) :
+        f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁ɛ₂part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...)), 1 : N), 1 : N))
+    else
+        apply_scalar(f, args...; kwargs...) 
+    end
+end
+
 function apply_linear_hyper(f, args::Vararg{Any, N}; kwargs...) where N
     if any(ishyperdualarray, args)
         HyperDualArray(f(map(hyperrealpart, args)...; kwargs...), sum(i -> f(map(hyperrealpart, args[1 : i - 1])..., ɛ₁part(args[i]), map(hyperrealpart, args[i + 1 : end])...,; kwargs...), 1 : N),
@@ -93,10 +107,20 @@ function apply_linear_hyper(f, args::Vararg{Any, N}; kwargs...) where N
     end
 end
 
+Base.:*(a::HyperDual, B::AbstractArray) = apply_linear_hyper(*, a, B)
+Base.:*(A::AbstractArray, b::HyperDual) = apply_linear_hyper(*, A, b)
+Base.:\(a::HyperDual, B::AbstractArray) = apply_linear_hyper(\, a, B)
+Base.:/(A::AbstractArray, b::HyperDual) = apply_linear_hyper(/, A, b)
+
 Base.:*(a::Number, B::HyperDualArray) = apply_linear_hyper(*, a, B)
 Base.:*(A::HyperDualArray, b::Number) = apply_linear_hyper(*, A, b)
 Base.:\(a::Number, B::HyperDualArray) = apply_linear_hyper(\, a, B)
 Base.:/(A::HyperDualArray, b::Number) = apply_linear_hyper(/, A, b)
+
+Base.:*(a::HyperDual, B::HyperDualArray) = apply_linear_hyper(*, a, B)
+Base.:*(A::HyperDualArray, b::HyperDual) = apply_linear_hyper(*, A, b)
+Base.:\(a::HyperDual, B::HyperDualArray) = apply_linear_hyper(\, a, B)
+Base.:/(A::HyperDualArray, b::HyperDual) = apply_linear_hyper(/, A, b)
 
 Base.:*(A::HyperDualMatrix, B::AbstractVector) = apply_linear_hyper(*, A, B)
 Base.:*(A::AbstractMatrix, B::HyperDualVector) = apply_linear_hyper(*, A, B)
@@ -105,8 +129,6 @@ Base.:*(A::HyperDualMatrix, B::HyperDualVector) = apply_linear_hyper(*, A, B)
 Base.:*(A::HyperDualMatrix, B::AbstractMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::AbstractMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::HyperDualMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
-
-Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualVector) = hyperdualein"i, i -> "(conj(parent(A)), B)[]
 
 Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::HyperDualMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)

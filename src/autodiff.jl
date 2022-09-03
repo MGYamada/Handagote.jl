@@ -1,9 +1,9 @@
 Zygote.@adjoint function Dual{T}(x, y) where T
-    Dual{T}(x, y), Δ -> (realpart(Δ), ɛpart(Δ))
+    Dual{T}(x, y), Δ -> (Δ.value, Δ.epsilon)
 end
 
 Zygote.@adjoint function DualArray{T, N}(x, y) where {T, N}
-    DualArray{T, N}(x, y), Δ -> (realpart(Δ), ɛpart(Δ))
+    DualArray{T, N}(x, y), Δ -> (Δ.value, Δ.epsilon)
 end
 
 Zygote.@adjoint function realpart(x::Dual)
@@ -23,11 +23,11 @@ Zygote.@adjoint function εpart(x::DualArray)
 end
 
 Zygote.@adjoint function HyperDual{T}(x, y, z, w) where T
-    HyperDual{T}(x, y, z, w), Δ -> (hyperrealpart(Δ), ɛ₁part(Δ), ɛ₂part(Δ), ɛ₁ε₂part(Δ))
+    HyperDual{T}(x, y, z, w), Δ -> (Δ.value, Δ.epsilon1, Δ.epsilon2, Δ.epsilon12)
 end
 
 Zygote.@adjoint function HyperDualArray{T, N}(x, y, z, w) where {T, N}
-    HyperDualArray{T, N}(x, y, z, w), Δ -> (hyperrealpart(Δ), ɛ₁part(Δ), ɛ₂part(Δ), ɛ₁ε₂part(Δ))
+    HyperDualArray{T, N}(x, y, z, w), Δ -> (Δ.value, Δ.epsilon1, Δ.epsilon2, Δ.epsilon12)
 end
 
 Zygote.@adjoint function hyperrealpart(x::HyperDual)
@@ -63,17 +63,17 @@ Zygote.@adjoint function ɛ₁ε₂part(x::HyperDualArray)
 end
 
 Zygote.@adjoint function LinearAlgebra.tr(x::DualMatrix)
-    tr(x), Δ -> (DualArray(Diagonal(Fill(realpart(Δ), (size(x, 1),))), Diagonal(Fill(ɛpart(Δ), (size(x, 1),)))),)
+    tr(x), Δ -> (DualArray(Diagonal(Fill(Δ.value, (size(x, 1),))), Diagonal(Fill(Δ.epsilon, (size(x, 1),)))),)
 end
 
 Zygote.@adjoint function LinearAlgebra.tr(x::HyperDualMatrix)
-    tr(x), Δ -> (HyperDualArray(Diagonal(Fill(hyperrealpart(Δ), (size(x, 1),))), Diagonal(Fill(ɛ₁part(Δ), (size(x, 1),))), Diagonal(Fill(ɛ₂part(Δ), (size(x, 1),))), Diagonal(Fill(ɛ₁ε₂part(Δ), (size(x, 1),)))),)
+    tr(x), Δ -> (HyperDualArray(Diagonal(Fill(Δ.value, (size(x, 1),))), Diagonal(Fill(Δ.epsilon1, (size(x, 1),))), Diagonal(Fill(Δ.epsilon2, (size(x, 1),))), Diagonal(Fill(Δ.epsilon12, (size(x, 1),)))),)
 end
 
 Zygote.@adjoint function Base.reshape(xs::DualArray, dims...)
-    reshape(xs, dims...), Δ -> (DualArray(reshape(realpart(Δ), size(xs)), reshape(ɛpart(Δ), size(xs))), map(_ -> nothing, dims)...)
+    reshape(xs, dims...), Δ -> (DualArray(reshape(Δ.value, size(xs)), reshape(Δ.epsilon, size(xs))), map(_ -> nothing, dims)...)
 end
 
 Zygote.@adjoint function Base.reshape(xs::HyperDualArray, dims...)
-    reshape(xs, dims...), Δ -> (HyperDualArray(reshape(hyperrealpart(Δ), size(xs)), reshape(ɛ₁part(Δ), size(xs)), reshape(ɛ₂part(Δ), size(xs)), reshape(ɛ₁ε₂part(Δ), size(xs))), map(_ -> nothing, dims)...)
+    reshape(xs, dims...), Δ -> (HyperDualArray(reshape(Δ.value, size(xs)), reshape(Δ.epsilon1, size(xs)), reshape(Δ.epsilon2, size(xs)), reshape(Δ.epsilon12, size(xs))), map(_ -> nothing, dims)...)
 end

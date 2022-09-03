@@ -63,6 +63,14 @@ Base.:-(A::DualArray, B::DualArray) = DualArray(realpart(A) - realpart(B), εpar
 
 Base.:+(A::DualArray, B::DualArray) = DualArray(realpart(A) + realpart(B), εpart(A) + εpart(B))
 
+function apply_scalar(f, args::Vararg{Any, N}; kwargs...) where N
+    if any(isdualarray, args)
+        Dual(f(map(realpart, args)...; kwargs...), sum(map(i -> f(map(realpart, args[1 : i - 1])..., εpart(args[i]), map(realpart, args[i + 1 : end])...,; kwargs...), 1 : N)))
+    else
+        f(args...; kwargs...)
+    end
+end
+
 function apply_linear(f, args::Vararg{Any, N}; kwargs...) where N
     if any(isdualarray, args)
         DualArray(f(map(realpart, args)...; kwargs...), sum(map(i -> f(map(realpart, args[1 : i - 1])..., εpart(args[i]), map(realpart, args[i + 1 : end])...,; kwargs...), 1 : N)))
@@ -71,10 +79,20 @@ function apply_linear(f, args::Vararg{Any, N}; kwargs...) where N
     end
 end
 
+Base.:*(a::Dual, B::AbstractArray) = apply_linear(*, a, B)
+Base.:*(A::AbstractArray, b::Dual) = apply_linear(*, A, b)
+Base.:\(a::Dual, B::AbstractArray) = apply_linear(\, a, B)
+Base.:/(A::AbstractArray, b::Dual) = apply_linear(/, A, b)
+
 Base.:*(a::Number, B::DualArray) = apply_linear(*, a, B)
 Base.:*(A::DualArray, b::Number) = apply_linear(*, A, b)
 Base.:\(a::Number, B::DualArray) = apply_linear(\, a, B)
 Base.:/(A::DualArray, b::Number) = apply_linear(/, A, b)
+
+Base.:*(a::Dual, B::DualArray) = apply_linear(*, a, B)
+Base.:*(A::DualArray, b::Dual) = apply_linear(*, A, b)
+Base.:\(a::Dual, B::DualArray) = apply_linear(\, a, B)
+Base.:/(A::DualArray, b::Dual) = apply_linear(/, A, b)
 
 Base.:*(A::DualMatrix, B::AbstractVector) = apply_linear(*, A, B)
 Base.:*(A::AbstractMatrix, B::DualVector) = apply_linear(*, A, B)
@@ -84,11 +102,25 @@ Base.:*(A::DualMatrix, B::AbstractMatrix) = apply_linear(*, A, B)
 Base.:*(A::AbstractMatrix, B::DualMatrix) = apply_linear(*, A, B)
 Base.:*(A::DualMatrix, B::DualMatrix) = apply_linear(*, A, B)
 
-Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualVector) = dualein"i, i -> "(conj(parent(A)), B)[]
+LinearAlgebra.dot(A::DualVector, B::AbstractVector) = apply_scalar(dot, A, B)
+LinearAlgebra.dot(A::AbstractVector, B::DualVector) = apply_scalar(dot, A, B)
+LinearAlgebra.dot(A::DualVector, B::DualVector) = apply_scalar(dot, A, B)
+
+LinearAlgebra.dot(A::DualVector, B::AbstractMatrix, C::AbstractVector) = apply_scalar(dot, A, B, C)
+LinearAlgebra.dot(A::AbstractVector, B::DualMatrix, C::AbstractVector) = apply_scalar(dot, A, B, C)
+LinearAlgebra.dot(A::AbstractVector, B::AbstractMatrix, C::DualVector) = apply_scalar(dot, A, B, C)
+LinearAlgebra.dot(A::DualVector, B::DualMatrix, C::AbstractVector) = apply_scalar(dot, A, B, C)
+LinearAlgebra.dot(A::DualVector, B::AbstractMatrix, C::DualVector) = apply_scalar(dot, A, B, C)
+LinearAlgebra.dot(A::AbstractVector, B::DualMatrix, C::DualVector) = apply_scalar(dot, A, B, C)
+LinearAlgebra.dot(A::DualVector, B::DualMatrix, C::DualVector) = apply_scalar(dot, A, B, C)
 
 Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)
 Base.:*(A::DualMatrix, B::Adjoint{T, <:AbstractMatrix} where T) = dualein"ij, kj -> ik"(A, conj(parent(B)))
+
+Base.:*(A::Adjoint{<: Number, <:AbstractVector}, B::DualVector) = dot(parent(A), B)
+Base.:*(A::Adjoint{<: Number, <:DualVector}, B::AbstractVector) = dot(parent(A), B)
+Base.:*(A::Adjoint{<: Number, <:DualVector}, B::DualVector) = dot(parent(A), B)
 
 Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{T, <:DualMatrix} where T, B::AbstractVector) = dualein"ij, i -> j"(conj(parent(A)), B)
