@@ -1,6 +1,6 @@
 const ReComp = Union{Real, Complex}
 
-mutable struct Dual{T <: ReComp} <: Number
+struct Dual{T <: ReComp} <: Number
     value::T
     epsilon::T
 end
