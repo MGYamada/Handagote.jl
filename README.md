@@ -11,7 +11,9 @@ https://github.com/JuliaDiff/HyperDualNumbers.jl
 
 ## TODO
 
-supporting CUDA
+* Dual Number operation
+* supporting op(::Dual, ::HyperDual)
+* supporting CUDA
 
 ## Einsum
 

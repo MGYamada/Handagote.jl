@@ -5,7 +5,12 @@ using OMEinsum
 using Random
 using ChainRulesCore
 using Zygote, FillArrays
+using SpecialFunctions
+import NaNMath
+import Calculus
+import CommonSubexpressions
 
+include("derivatives_list.jl")
 include("dual.jl")
 include("hyperdual.jl")
 include("rand.jl")
@@ -20,5 +25,6 @@ export AbstractDual, Dual, AbstractDualArray, DualArray, DualVector, DualMatrix
 export HyperDual, HyperDualArray, HyperDualVector, HyperDualMatrix
 export ɛ, ɛ₁, ɛ₂, ɛ₁ε₂, realpart, ɛpart, hyperrealpart, ɛ₁part, ɛ₂part, ɛ₁ε₂part
 export isdual, isdualarray, ishyperdual, ishyperdualarray
+export symbolic_derivative_list
 
 end
