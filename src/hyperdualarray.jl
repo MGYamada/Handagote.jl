@@ -54,12 +54,12 @@ Base.similar(A::HyperDualArray, dims::Tuple{Vararg{Union{Integer, AbstractUnitRa
 Base.similar(A::AbstractArray, ::Type{HyperDual{T}}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T = HyperDualArray(similar(hyperrealpart(A), T, dims...))
 # Base.similar(A::AbstractArray, ::Type{HyperDual{T}}, dims::Tuple{Vararg{Union{Integer, AbstractUnitRange}}}) where T = HyperDualArray(similar(hyperrealpart(A), T, dims...))
 
-Base.ones(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: HyperDual = DualArray(ones(hyperdualtype(T), dims...))
-Base.ones(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = DualArray(ones(hyperdualtype(T), dims))
-Base.ones(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = DualArray(ones(hyperdualtype(T), dims))
-Base.zeros(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: HyperDual = DualArray(zeros(hyperdualtype(T), dims...))
-Base.zeros(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = DualArray(zeros(hyperdualtype(T), dims))
-Base.zeros(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = DualArray(zeros(hyperdualtype(T), dims))
+Base.ones(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: HyperDual = HyperDualArray(ones(hyperdualtype(T), dims...))
+Base.ones(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = HyperDualArray(ones(hyperdualtype(T), dims))
+Base.ones(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = HyperDualArray(ones(hyperdualtype(T), dims))
+Base.zeros(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <: HyperDual = HyperDualArray(zeros(hyperdualtype(T), dims...))
+Base.zeros(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = HyperDualArray(zeros(hyperdualtype(T), dims))
+Base.zeros(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = HyperDualArray(zeros(hyperdualtype(T), dims))
 
 Base.getindex(A::HyperDualArray, inds...) = HyperDual(getindex(hyperrealpart(A), inds...), getindex(ɛ₁part(A), inds...), getindex(ɛ₂part(A), inds...), getindex(ɛ₁ε₂part(A), inds...))
 
@@ -130,13 +130,37 @@ Base.:*(A::HyperDualMatrix, B::AbstractMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::AbstractMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 Base.:*(A::HyperDualMatrix, B::HyperDualMatrix) = apply_linear_hyper(*, A, B)
 
-Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::HyperDualMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
-Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::HyperDualMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)
-Base.:*(A::HyperDualMatrix, B::Adjoint{T, <:AbstractMatrix} where T) = hyperdualein"ij, kj -> ik"(A, conj(parent(B)))
+LinearAlgebra.dot(A::HyperDualVector, B::AbstractVector) = apply_scalar_hyper(dot, A, B)
+LinearAlgebra.dot(A::AbstractVector, B::HyperDualVector) = apply_scalar_hyper(dot, A, B)
+LinearAlgebra.dot(A::HyperDualVector, B::HyperDualVector) = apply_scalar_hyper(dot, A, B)
 
-Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
-Base.:*(A::Adjoint{T, <:HyperDualMatrix} where T, B::AbstractVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
-Base.:*(A::Adjoint{T, <:HyperDualMatrix} where T, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
+LinearAlgebra.dot(A::HyperDualVector, B::AbstractMatrix, C::AbstractVector) = apply_scalar_hyper(dot, A, B, C)
+LinearAlgebra.dot(A::AbstractVector, B::HyperDualMatrix, C::AbstractVector) = apply_scalar_hyper(dot, A, B, C)
+LinearAlgebra.dot(A::AbstractVector, B::AbstractMatrix, C::HyperDualVector) = apply_scalar_hyper(dot, A, B, C)
+LinearAlgebra.dot(A::HyperDualVector, B::HyperDualMatrix, C::AbstractVector) = apply_scalar_hyper(dot, A, B, C)
+LinearAlgebra.dot(A::HyperDualVector, B::AbstractMatrix, C::HyperDualVector) = apply_scalar_hyper(dot, A, B, C)
+LinearAlgebra.dot(A::AbstractVector, B::HyperDualMatrix, C::HyperDualVector) = apply_scalar_hyper(dot, A, B, C)
+LinearAlgebra.dot(A::HyperDualVector, B::HyperDualMatrix, C::HyperDualVector) = apply_scalar_hyper(dot, A, B, C)
+
+Base.:*(A::Adjoint{<: Number, <:AbstractVector}, B::HyperDualMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualVector}, B::AbstractMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualVector}, B::HyperDualMatrix) = hyperdualein"i, ij -> j"(conj(parent(A)), B)
+
+Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::HyperDualMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::AbstractMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::HyperDualMatrix) = hyperdualein"ij, ik -> jk"(conj(parent(A)), B)
+
+Base.:*(A::HyperDualMatrix, B::Adjoint{<: Number, <:AbstractMatrix}) = hyperdualein"ij, kj -> ik"(A, conj(parent(B)))
+Base.:*(A::AbstractMatrix, B::Adjoint{<: Number, <:HyperDualMatrix}) = hyperdualein"ij, kj -> ik"(A, conj(parent(B)))
+Base.:*(A::HyperDualMatrix, B::Adjoint{<: Number, <:HyperDualMatrix}) = hyperdualein"ij, kj -> ik"(A, conj(parent(B)))
+
+Base.:*(A::Adjoint{<: Number, <:AbstractVector}, B::HyperDualVector) = dot(parent(A), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualVector}, B::AbstractVector) = dot(parent(A), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualVector}, B::HyperDualVector) = dot(parent(A), B)
+
+Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::AbstractVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
 
 LinearAlgebra.tr(A::HyperDualMatrix) = HyperDual(tr(hyperrealpart(A)), tr(ɛ₁part(A)), tr(ɛ₂part(A)), tr(ɛ₁ε₂part(A)))
 

@@ -114,17 +114,25 @@ LinearAlgebra.dot(A::DualVector, B::AbstractMatrix, C::DualVector) = apply_scala
 LinearAlgebra.dot(A::AbstractVector, B::DualMatrix, C::DualVector) = apply_scalar(dot, A, B, C)
 LinearAlgebra.dot(A::DualVector, B::DualMatrix, C::DualVector) = apply_scalar(dot, A, B, C)
 
-Base.:*(A::Adjoint{T, <:AbstractVector} where T, B::DualMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
-Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)
-Base.:*(A::DualMatrix, B::Adjoint{T, <:AbstractMatrix} where T) = dualein"ij, kj -> ik"(A, conj(parent(B)))
+Base.:*(A::Adjoint{<: Number, <:AbstractVector}, B::DualMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:DualVector}, B::AbstractMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:DualVector}, B::DualMatrix) = dualein"i, ij -> j"(conj(parent(A)), B)
+
+Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::DualMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::AbstractMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::DualMatrix) = dualein"ij, ik -> jk"(conj(parent(A)), B)
+
+Base.:*(A::DualMatrix, B::Adjoint{<: Number, <:AbstractMatrix}) = dualein"ij, kj -> ik"(A, conj(parent(B)))
+Base.:*(A::AbstractMatrix, B::Adjoint{<: Number, <:DualMatrix}) = dualein"ij, kj -> ik"(A, conj(parent(B)))
+Base.:*(A::DualMatrix, B::Adjoint{<: Number, <:DualMatrix}) = dualein"ij, kj -> ik"(A, conj(parent(B)))
 
 Base.:*(A::Adjoint{<: Number, <:AbstractVector}, B::DualVector) = dot(parent(A), B)
 Base.:*(A::Adjoint{<: Number, <:DualVector}, B::AbstractVector) = dot(parent(A), B)
 Base.:*(A::Adjoint{<: Number, <:DualVector}, B::DualVector) = dot(parent(A), B)
 
-Base.:*(A::Adjoint{T, <:AbstractMatrix} where T, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
-Base.:*(A::Adjoint{T, <:DualMatrix} where T, B::AbstractVector) = dualein"ij, i -> j"(conj(parent(A)), B)
-Base.:*(A::Adjoint{T, <:DualMatrix} where T, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::AbstractVector) = dualein"ij, i -> j"(conj(parent(A)), B)
+Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
 
 LinearAlgebra.tr(A::DualMatrix) = Dual(tr(realpart(A)), tr(εpart(A)))
 
