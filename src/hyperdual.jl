@@ -61,7 +61,131 @@ ishyperdual(x::Number) = false
 Base.eps(h::HyperDual) = eps(hyperrealpart(h))
 Base.eps(::Type{HyperDual{T}}) where T = eps(T)
 
-# show
+function hyperpart_show(io::IO, yzw::T, compact::Bool, str::String) where T<:Real
+    if signbit(yzw)
+        yzw = -yzw
+        print(io, compact ? "-" : " - ")
+    else
+        print(io, compact ? "+" : " + ")
+    end
+    compact ? show(IOContext(io, :compact=>true), yzw) : show(io, yzw)
+    printtimes(io, yzw)
+    print(io, str)
+end
+
+function hyper_show(io::IO, h::HyperDual{T}, compact::Bool) where T<:Real
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    compact ? show(IOContext(io, :compact=>true), x) : show(io, x)
+    hyperpart_show(io, y, compact, "ε₁")
+    hyperpart_show(io, z, compact, "ε₂")
+    hyperpart_show(io, w, compact, "ε₁ε₂")
+end
+
+function hyperpart_show(io::IO, yzw::T, compact::Bool, str::String) where T<:Complex
+    yzwr, yzwi = reim(yzw)
+    if signbit(yzwr)
+        yzwr = -yzwr
+        print(io, " - ")
+    else
+        print(io, " + ")
+    end
+    if compact
+        if signbit(yzwi)
+            yzwi = -yzwi
+            show(IOContext(io, :compact=>true), yzwr)
+            printtimes(io, yzwr)
+            print(io, str, "-")
+            show(IOContext(io, :compact=>true), yzwi)
+        else
+            show(IOContext(io, :compact=>true), yzwr)
+            print(io, str, "+")
+            show(IOContext(io, :compact=>true), yzwi)
+        end
+    else
+        if signbit(yzwi)
+            yzwi = -yzwi
+            show(io, yzwr)
+            printtimes(io, yzwr)
+            print(io, str, " - ")
+            show(io, yzwi)
+        else
+            show(io, yzwr)
+            print(io, str, " + ")
+            show(io, yzwi)
+        end
+    end
+    printtimes(io, yzwi)
+    print(io, "im", str)
+end
+
+function hyper_show(io::IO, h::HyperDual{T}, compact::Bool) where T<:Complex
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    compact ? show(IOContext(io, :compact=>true), x) : show(io, x)
+    hyperpart_show(io, y, compact, "ε₁")
+    hyperpart_show(io, z, compact, "ε₂")
+    hyperpart_show(io, w, compact, "ε₁ε₂")
+end
+
+function hyper_show(io::IO, h::HyperDual{T}, compact::Bool) where T<:Bool
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    if !x && y && !z && !w
+        print(io, "ɛ₁")
+    elseif !x && !y && z && !w
+        print(io, "ɛ₂")
+    elseif !x && !y && !z && w
+        print(io, "ɛ₁ε₂")
+    else
+        print(io, "HyperDual{",T,"}(", x, ",", y, ",", z, ",", w, ")")
+    end
+end
+
+function hyper_show(io::IO, h::HyperDual{Complex{T}}, compact::Bool) where T<:Bool
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    xr, xi = reim(x)
+    yr, yi = reim(y)
+    zr, zi = reim(z)
+    wr, wi = reim(w)
+    if !xr * xi * !yr * !yi * !zr * !zi * !wr * !wi
+        print(io, "im")
+    elseif !xr * !xi * yr * !yi * !zr * !zi * !wr * !wi
+        print(io, "ɛ₁")
+    elseif !xr * !xi * !yr * yi * !zr * !zi * !wr * !wi
+        print(io, "imɛ₁")
+    elseif !xr * !xi * !yr * !yi * zr * !zi * !wr * !wi
+        print(io, "ɛ₂")
+    elseif !xr * !xi * !yr * !yi * !zr * zi * !wr * !wi
+        print(io, "imɛ₂")
+    elseif !xr * !xi * !yr * !yi * !zr * !zi * wr * !wi
+        print(io, "ε₁ɛ₂")
+    elseif !xr * !xi * !yr * !yi * !zr * !zi * !wr * wi
+        print(io, "imε₁ɛ₂")
+    else
+        print(io, "HyperDual{",T,"}(", x, ",", y, ",", z, ",", w, ")")
+    end
+end
+
+function printtimes(io::IO, x::Real)
+    if !(isa(x,Integer) || isa(x,Rational) ||
+         isa(x,AbstractFloat) && isfinite(x))
+        print(io, "*")
+    end
+end
+
+Base.show(io::IO, h::HyperDual) = hyper_show(io, h, get(IOContext(io), :compact, false))
+
+function Base.read(s::IO, ::Type{HyperDual{T}}) where T<:ReComp
+    x = read(s, T)
+    y = read(s, T)
+    z = read(s, T)
+    w = read(s, T)
+    HyperDual{T}(x, y, z, w)
+end
+function Base.write(s::IO, h::HyperDual)
+    write(s, hyperrealpart(h))
+    write(s, ε₁part(h))
+    write(s, ε₂part(h))
+    write(s, ε₁ε₂part(h))
+end
 
 Base.convert(::Type{HyperDual}, h::HyperDual) = h
 Base.convert(::Type{HyperDual}, x::Number) = HyperDual(x)
@@ -163,9 +287,95 @@ function Base.:/(n::Number, h::HyperDual)
 end
 Base.:/(h::HyperDual, n::Number) = HyperDual(hyperrealpart(h)/n, ε₁part(h)/n, ε₂part(h)/n, ε₁ε₂part(h)/n)
 
-Base.mod(h::HyperDual, n::Number) = Hyper(mod(hyperrealpart(h), n), ε₁part(h), ε₂part(h), ε₁ε₂part(h))
+Base.mod(h::HyperDual, n::Number) = HyperDual(mod(hyperrealpart(h), n), ε₁part(h), ε₂part(h), ε₁ε₂part(h))
 
-# pow
+# Power functions written using sage to see Taylor expansions
+#   (x+y*ε₁+z*ε₂+w*ε₁*ε₂)^(a+b*ε₁+c*ε₂+d*ε₁*ε₂)
+# around 0 for y, z, w, b, c, and d
+function Base.:^(h₁::HyperDual, h₂::HyperDual)
+    x, y, z, w = hyperrealpart(h₁), ε₁part(h₁), ε₂part(h₁), ε₁ε₂part(h₁)
+    a, b, c, d = hyperrealpart(h₂), ε₁part(h₂), ε₂part(h₂), ε₁ε₂part(h₂)
+    return HyperDual(x^a,
+        a*x^(a - 1)*y + b*x^a*log(x),
+        a*x^(a - 1)*z + c*x^a*log(x),
+        a^2*x^(a - 2)*y*z + a*c*x^(a - 1)*y*log(x) + a*b*x^(a - 1)*z*log(x) + b*c*x^a*log(x)^2 - a*x^(a - 2)*y*z + a*w*x^(a - 1) + c*x^(a - 1)*y + b*x^(a - 1)*z + d*x^a*log(x))
+end
+
+function NaNMath.pow(h₁::HyperDual, h₂::HyperDual)
+    x, y, z, w = hyperrealpart(h₁), ε₁part(h₁), ε₂part(h₁), ε₁ε₂part(h₁)
+    a, b, c, d = hyperrealpart(h₂), ε₁part(h₂), ε₂part(h₂), ε₁ε₂part(h₂)
+    return HyperDual(NaNMath.pow(x,a),
+        a*NaNMath.pow(x,a - 1)*y + b*NaNMath.pow(x,a)*log(x),
+        a*NaNMath.pow(x,a - 1)*z + c*NaNMath.pow(x,a)*log(x),
+        a^2*NaNMath.pow(x,a - 2)*y*z + a*c*NaNMath.pow(x,a - 1)*y*log(x) + a*b*NaNMath.pow(x,a - 1)*z*log(x) + b*c*NaNMath.pow(x,a)*log(x)^2 - a*NaNMath.pow(x,a - 2)*y*z + a*w*NaNMath.pow(x,a - 1) + c*NaNMath.pow(x,a - 1)*y + b*NaNMath.pow(x,a - 1)*z + d*NaNMath.pow(x,a)*log(x))
+end
+
+function Base.:^(h::HyperDual, a::Integer)
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(x^a,
+        a*x^(a - 1)*y,
+        a*x^(a - 1)*z,
+        a^2*x^(a - 2)*y*z - a*x^(a - 2)*y*z + a*w*x^(a - 1))
+end
+
+function Base.:^(h::HyperDual, a::Rational)
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(x^a,
+        a*x^(a - 1)*y,
+        a*x^(a - 1)*z,
+        a^2*x^(a - 2)*y*z - a*x^(a - 2)*y*z + a*w*x^(a - 1))
+end
+
+function Base.:^(h::HyperDual, a::Number)
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(x^a,
+        a*x^(a - 1)*y,
+        a*x^(a - 1)*z,
+        a^2*x^(a - 2)*y*z - a*x^(a - 2)*y*z + a*w*x^(a - 1))
+end
+
+# Below definition is necesssary to resolve a conflict with the
+# definition in MathConstants.jl
+function Base.:^(x::Irrational{:ℯ}, h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(x^a,
+        b*x^a*log(x),
+        c*x^a*log(x),
+        b*c*x^a*log(x)^2 + d*x^a*log(x))
+end
+function Base.:^(x::Number, h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(x^a,
+        b*x^a*log(x),
+        c*x^a*log(x),
+        b*c*x^a*log(x)^2 + d*x^a*log(x))
+end
+
+function NaNMath.pow(h::HyperDual, a::Number)
+    x, y, z, w = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(NaNMath.pow(x,a),
+        a*NaNMath.pow(x,a - 1)*y,
+        a*NaNMath.pow(x,a - 1)*z,
+        a^2*NaNMath.pow(x,a - 2)*y*z - a*NaNMath.pow(x,a - 2)*y*z + a*w*NaNMath.pow(x,a - 1))
+end
+function NaNMath.pow(x::Number, h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return HyperDual(NaNMath.pow(x,a),
+        b*NaNMath.pow(x,a)*log(x),
+        c*NaNMath.pow(x,a)*log(x),
+        b*c*NaNMath.pow(x,a)*log(x)^2 + d*NaNMath.pow(x,a)*log(x))
+end
+
+# force use of NaNMath functions in derivative calculations
+function to_nanmath(x::Expr)
+    if x.head == :call
+        funsym = Expr(:.,:NaNMath,Base.Meta.quot(x.args[1]))
+        return Expr(:call,funsym,[to_nanmath(z) for z in x.args[2:end]]...)
+    else
+        return Expr(:call,[to_nanmath(z) for z in x.args]...)
+    end
+end
+to_nanmath(x) = x
 
 for (fsym, dfexp, d²fexp) in symbolic_derivative_list
     mod = isdefined(SpecialFunctions, fsym) ? SpecialFunctions :
@@ -190,3 +400,31 @@ for (fsym, dfexp, d²fexp) in symbolic_derivative_list
         end
     end
 end
+
+# Can use sincos for cos and sin
+function Base.cos(h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    si, co = sincos(a)
+    return HyperDual(co, -si*b, -si*c, -si*d - co*b*c)
+end
+
+function Base.sin(h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    si, co = sincos(a)
+    return HyperDual(si, co*b, co*c, co*d - si*b*c)
+end
+
+# only need to compute exp/cis once (removed exp from derivatives_list)
+function Base.exp(h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return exp(a) * HyperDual(one(a), b, c, d + b*c)
+end
+
+function Base.cis(h::HyperDual)
+    a, b, c, d = hyperrealpart(h), ε₁part(h), ε₂part(h), ε₁ε₂part(h)
+    return cis(a) * HyperDual(one(a), im*b, im*c, im*d - b*c)
+end
+
+# TODO: should be generated in Calculus, sinpi and cospi (erased here)
+
+Base.checkindex(::Type{Bool}, inds::AbstractUnitRange, i::HyperDual) = checkindex(Bool, inds, hyperrealpart(h))
