@@ -41,8 +41,8 @@ hyperrealpart(x::AbstractArray) = x
 
 ishyperdualarray(::HyperDualArray) = true
 ishyperdualarray(::AbstractArray) = false
-isdualarray(::HyperDual) = true
-isdualarray(::Number) = false
+ishyperdualarray(::HyperDual) = true
+ishyperdualarray(::Number) = false
 
 Base.size(A::HyperDualArray) = size(hyperrealpart(A))
 

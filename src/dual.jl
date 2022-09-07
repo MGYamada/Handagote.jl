@@ -154,4 +154,54 @@ function to_nanmath(x::Expr)
 end
 to_nanmath(x) = x
 
+for (fsym, dfexp, d²fexp) in symbolic_derivative_list
+    mod = isdefined(SpecialFunctions, fsym) ? SpecialFunctions :
+          isdefined(Base, fsym)             ? Base             :
+          isdefined(Base.Math, fsym)        ? Base.Math        :
+          nothing
+    if mod !== nothing && fsym !== :sin && fsym !== :cos # (we define out own sin and cos)
+        expr = :(Dual($(fsym)(x), y*$dfexp))
+        cse_expr = CommonSubexpressions.cse(expr, warn=false)
+
+        @eval function $mod.$(fsym)(h::Dual)
+            x, y = realpart(h), εpart(h)
+            $cse_expr
+        end
+    end
+    # extend corresponding NaNMath methods
+    if fsym in (:sin, :cos, :tan, :asin, :acos, :acosh, :atanh, :log, :log2, :log10, :log1p)
+        fsym = Expr(:.,:NaNMath,Base.Meta.quot(fsym))
+        @eval function $(fsym)(h::Dual)
+            x, y = realpart(h), εpart(h)
+            Dual($(fsym)(x), y*$(to_nanmath(dfexp)))
+        end
+    end
+end
+
+# Can use sincos for cos and sin
+function Base.cos(h::Dual)
+    a, b = realpart(h), εpart(h)
+    si, co = sincos(a)
+    return Dual(co, -si*b)
+end
+
+function Base.sin(h::Dual)
+    a, b = realpart(h), εpart(h)
+    si, co = sincos(a)
+    return Dual(si, co*b)
+end
+
+# only need to compute exp/cis once (removed exp from derivatives_list)
+function Base.exp(h::Dual)
+    a, b = realpart(h), εpart(h)
+    return exp(a) * Dual(one(a), b)
+end
+
+function Base.cis(h::Dual)
+    a, b = realpart(h), εpart(h)
+    return cis(a) * Dual(one(a), im*b)
+end
+
+# TODO: should be generated in Calculus, sinpi and cospi (erased here)
+
 Base.checkindex(::Type{Bool}, inds::AbstractUnitRange, i::Dual) = checkindex(Bool, inds, realpart(h))
