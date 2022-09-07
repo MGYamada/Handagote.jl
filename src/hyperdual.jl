@@ -366,16 +366,15 @@ function NaNMath.pow(x::Number, h::HyperDual)
         b*c*NaNMath.pow(x,a)*log(x)^2 + d*NaNMath.pow(x,a)*log(x))
 end
 
-# force use of NaNMath functions in derivative calculations
-function to_nanmath(x::Expr)
-    if x.head == :call
-        funsym = Expr(:.,:NaNMath,Base.Meta.quot(x.args[1]))
-        return Expr(:call,funsym,[to_nanmath(z) for z in x.args[2:end]]...)
-    else
-        return Expr(:call,[to_nanmath(z) for z in x.args]...)
-    end
-end
-to_nanmath(x) = x
+# function to_nanmath(x::Expr)
+#     if x.head == :call
+#         funsym = Expr(:.,:NaNMath,Base.Meta.quot(x.args[1]))
+#         return Expr(:call,funsym,[to_nanmath(z) for z in x.args[2:end]]...)
+#     else
+#         return Expr(:call,[to_nanmath(z) for z in x.args]...)
+#     end
+# end
+# to_nanmath(x) = x
 
 for (fsym, dfexp, d²fexp) in symbolic_derivative_list
     mod = isdefined(SpecialFunctions, fsym) ? SpecialFunctions :
