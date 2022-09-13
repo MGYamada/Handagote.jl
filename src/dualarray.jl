@@ -41,7 +41,12 @@ Base.zeros(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <
 Base.zeros(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: Dual, N} = DualArray(zeros(dualtype(T), dims))
 Base.zeros(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: Dual, N} = DualArray(zeros(dualtype(T), dims))
 
-Base.getindex(A::DualArray, inds...) = Dual(getindex(realpart(A), inds...), getindex(εpart(A), inds...))
+_dual(A::Number, B::Number) = Dual(A, B)
+_dual(A::AbstractArray, B::AbstractArray) = DualArray(A, B)
+
+function Base.getindex(A::DualArray, inds...)
+    _dual(getindex(realpart(A), inds...), getindex(εpart(A), inds...))
+end
 
 function Base.setindex!(A::DualArray, X, inds...)
     setindex!(realpart(A), realpart(X), inds...)
@@ -81,18 +86,18 @@ end
 
 Base.:*(a::Dual, B::AbstractArray) = apply_linear(*, a, B)
 Base.:*(A::AbstractArray, b::Dual) = apply_linear(*, A, b)
-Base.:\(a::Dual, B::AbstractArray) = apply_linear(\, a, B)
-Base.:/(A::AbstractArray, b::Dual) = apply_linear(/, A, b)
+Base.:\(a::Dual, B::AbstractArray) = apply_linear(*, inv(a), B)
+Base.:/(A::AbstractArray, b::Dual) = apply_linear(*, A, inv(b))
 
 Base.:*(a::Number, B::DualArray) = apply_linear(*, a, B)
 Base.:*(A::DualArray, b::Number) = apply_linear(*, A, b)
-Base.:\(a::Number, B::DualArray) = apply_linear(\, a, B)
-Base.:/(A::DualArray, b::Number) = apply_linear(/, A, b)
+Base.:\(a::Number, B::DualArray) = apply_linear(*, inv(a), B)
+Base.:/(A::DualArray, b::Number) = apply_linear(*, A, inv(b))
 
 Base.:*(a::Dual, B::DualArray) = apply_linear(*, a, B)
 Base.:*(A::DualArray, b::Dual) = apply_linear(*, A, b)
-Base.:\(a::Dual, B::DualArray) = apply_linear(\, a, B)
-Base.:/(A::DualArray, b::Dual) = apply_linear(/, A, b)
+Base.:\(a::Dual, B::DualArray) = apply_linear(*, inv(a), B)
+Base.:/(A::DualArray, b::Dual) = apply_linear(*, A, inv(b))
 
 Base.:*(A::DualMatrix, B::AbstractVector) = apply_linear(*, A, B)
 Base.:*(A::AbstractMatrix, B::DualVector) = apply_linear(*, A, B)
@@ -134,8 +139,36 @@ Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::DualVector) = dualein"ij, i 
 Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::AbstractVector) = dualein"ij, i -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::DualVector) = dualein"ij, i -> j"(conj(parent(A)), B)
 
+Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::Adjoint{<: Number, <:DualMatrix}) = dualein"ij, ki -> jk"(conj(parent(A)), conj(parent(B)))
+Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::Adjoint{<: Number, <:AbstractMatrix}) = dualein"ij, ki -> jk"(conj(parent(A)), conj(parent(B)))
+Base.:*(A::Adjoint{<: Number, <:DualMatrix}, B::Adjoint{<: Number, <:DualMatrix}) = dualein"ij, ki -> jk"(conj(parent(A)), conj(parent(B)))
+
+Base.:*(A::DualMatrix, B::Diagonal{<: Number, <:AbstractVector}) = apply_linear((x, y) -> x * Diagonal(y), A, parent(B))
+Base.:*(A::AbstractMatrix, B::Diagonal{<: Number, <:DualVector}) = apply_linear((x, y) -> x * Diagonal(y), A, parent(B))
+Base.:*(A::DualMatrix, B::Diagonal{<: Number, <:DualVector}) = apply_linear((x, y) -> x * Diagonal(y), A, parent(B))
+
 LinearAlgebra.tr(A::DualMatrix) = Dual(tr(realpart(A)), tr(εpart(A)))
 
 Base.conj(A::DualArray) = DualArray(conj(realpart(A)), conj(εpart(A)))
 Base.reshape(A::DualArray, dims::Vararg{Int64, N}) where N = DualArray(reshape(realpart(A), dims), reshape(εpart(A), dims))
 Base.reshape(A::DualArray, dims::Tuple{Vararg{Int64, N}}) where N = DualArray(reshape(realpart(A), dims), reshape(εpart(A), dims))
+
+# Experimental
+
+function LinearAlgebra.diag(M::DualMatrix, k::Integer = 0)
+    DualArray(diag(realpart(M), k), diag(εpart(M), k))
+end
+
+function LinearAlgebra.svd(A::DualMatrix)
+    U, S, V = svd(realpart(A))
+    dA = εpart(A)
+    S² = S .^ 2
+    F = inv.(S²' .- S²)
+    F[diagind(F)] .= 0
+    temp1 = U' * dA * V * Diagonal(S)
+    dU = U * (F .* (temp1 .+ temp1')) .+ (I - U * U') * dA * V * Diagonal(inv.(S))
+    dS = diag(U' * dA * V)[1 : length(S)]
+    temp2 = V' * dA' * U * Diagonal(S)
+    dV = V * (F .* (temp2 .+ temp2')) .+ (I - V * V') * dA' * U * Diagonal(inv.(S))
+    DualArray(U, dU), DualArray(S, dS), DualArray(V, dV)
+end
