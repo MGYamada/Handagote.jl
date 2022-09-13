@@ -61,7 +61,12 @@ Base.zeros(::Type{T}, dims::Vararg{Union{Integer, AbstractUnitRange}}) where T <
 Base.zeros(::Type{T}, dims::Tuple{Vararg{Integer, N}}) where {T <: HyperDual, N} = HyperDualArray(zeros(hyperdualtype(T), dims))
 Base.zeros(::Type{T}, dims::Tuple{Vararg{Base.OneTo, N}}) where {T <: HyperDual, N} = HyperDualArray(zeros(hyperdualtype(T), dims))
 
-Base.getindex(A::HyperDualArray, inds...) = HyperDual(getindex(hyperrealpart(A), inds...), getindex(ɛ₁part(A), inds...), getindex(ɛ₂part(A), inds...), getindex(ɛ₁ε₂part(A), inds...))
+_hyperdual(A::Number, B::Number, C::Number, D::Number) = HyperDual(A, B, C, D)
+_hyperdual(A::AbstractArray, B::AbstractArray, C::AbstractArray, D::AbstractArray) = HyperDualArray(A, B, C, D)
+
+function Base.getindex(A::HyperDualArray, inds...)
+    _hyperdual(getindex(hyperrealpart(A), inds...), getindex(ɛ₁part(A), inds...), getindex(ɛ₂part(A), inds...), getindex(ɛ₁ε₂part(A), inds...))
+end
 
 function Base.setindex!(A::HyperDualArray, X, inds...)
     setindex!(hyperrealpart(A), hyperrealpart(X), inds...)
@@ -109,18 +114,18 @@ end
 
 Base.:*(a::HyperDual, B::AbstractArray) = apply_linear_hyper(*, a, B)
 Base.:*(A::AbstractArray, b::HyperDual) = apply_linear_hyper(*, A, b)
-Base.:\(a::HyperDual, B::AbstractArray) = apply_linear_hyper(\, a, B)
-Base.:/(A::AbstractArray, b::HyperDual) = apply_linear_hyper(/, A, b)
+Base.:\(a::HyperDual, B::AbstractArray) = apply_linear_hyper(*, inv(a), B)
+Base.:/(A::AbstractArray, b::HyperDual) = apply_linear_hyper(*, A, inv(b))
 
 Base.:*(a::Number, B::HyperDualArray) = apply_linear_hyper(*, a, B)
 Base.:*(A::HyperDualArray, b::Number) = apply_linear_hyper(*, A, b)
-Base.:\(a::Number, B::HyperDualArray) = apply_linear_hyper(\, a, B)
-Base.:/(A::HyperDualArray, b::Number) = apply_linear_hyper(/, A, b)
+Base.:\(a::Number, B::HyperDualArray) = apply_linear_hyper(*, inv(a), B)
+Base.:/(A::HyperDualArray, b::Number) = apply_linear_hyper(*, A, inv(b))
 
 Base.:*(a::HyperDual, B::HyperDualArray) = apply_linear_hyper(*, a, B)
 Base.:*(A::HyperDualArray, b::HyperDual) = apply_linear_hyper(*, A, b)
-Base.:\(a::HyperDual, B::HyperDualArray) = apply_linear_hyper(\, a, B)
-Base.:/(A::HyperDualArray, b::HyperDual) = apply_linear_hyper(/, A, b)
+Base.:\(a::HyperDual, B::HyperDualArray) = apply_linear_hyper(*, inv(a), B)
+Base.:/(A::HyperDualArray, b::HyperDual) = apply_linear_hyper(*, A, inv(b))
 
 Base.:*(A::HyperDualMatrix, B::AbstractVector) = apply_linear_hyper(*, A, B)
 Base.:*(A::AbstractMatrix, B::HyperDualVector) = apply_linear_hyper(*, A, B)
@@ -162,8 +167,36 @@ Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::HyperDualVector) = hyperdual
 Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::AbstractVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
 Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::HyperDualVector) = hyperdualein"ij, i -> j"(conj(parent(A)), B)
 
+Base.:*(A::Adjoint{<: Number, <:AbstractMatrix}, B::Adjoint{<: Number, <:HyperDualMatrix}) = hyperdualein"ij, ki -> jk"(conj(parent(A)), conj(parent(B)))
+Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::Adjoint{<: Number, <:AbstractMatrix}) = hyperdualein"ij, ki -> jk"(conj(parent(A)), conj(parent(B)))
+Base.:*(A::Adjoint{<: Number, <:HyperDualMatrix}, B::Adjoint{<: Number, <:HyperDualMatrix}) = hyperdualein"ij, ki -> jk"(conj(parent(A)), conj(parent(B)))
+
+Base.:*(A::HyperDualMatrix, B::Diagonal{<: Number, <:AbstractVector}) = apply_linear_hyper((x, y) -> x * Diagonal(y), A, parent(B))
+Base.:*(A::AbstractMatrix, B::Diagonal{<: Number, <:HyperDualVector}) = apply_linear_hyper((x, y) -> x * Diagonal(y), A, parent(B))
+Base.:*(A::HyperDualMatrix, B::Diagonal{<: Number, <:HyperDualVector}) = apply_linear_hyper((x, y) -> x * Diagonal(y), A, parent(B))
+
 LinearAlgebra.tr(A::HyperDualMatrix) = HyperDual(tr(hyperrealpart(A)), tr(ɛ₁part(A)), tr(ɛ₂part(A)), tr(ɛ₁ε₂part(A)))
 
 Base.conj(A::HyperDualArray) = HyperDualArray(conj(hyperrealpart(A)), conj(ɛ₁part(A)), conj(ɛ₂part(A)), conj(ɛ₁ε₂part(A)))
 Base.reshape(A::HyperDualArray, dims::Vararg{Int64, N}) where N = HyperDualArray(reshape(realpart(A), dims), reshape(εpart(A), dims))
 Base.reshape(A::HyperDualArray, dims::Tuple{Vararg{Int64, N}}) where N = HyperDualArray(reshape(realpart(A), dims), reshape(εpart(A), dims))
+
+# Experimental
+
+function LinearAlgebra.diag(M::HyperDualMatrix, k::Integer = 0)
+    HyperDualArray(diag(hyperrealpart(M), k), diag(ɛ₁part(M), k), diag(ɛ₂part(M), k), diag(ɛ₁ε₂part(M), k))
+end
+
+function LinearAlgebra.svd(A::HyperDualMatrix)
+    U, S, V = svd(realpart(A))
+    dA = εpart(A)
+    S² = S .^ 2
+    F = inv.(S²' .- S²)
+    F[diagind(F)] .= 0
+    temp1 = U' * dA * V * Diagonal(S)
+    dU = U * (F .* (temp1 .+ temp1')) .+ (I - U * U') * dA * V * Diagonal(inv.(S))
+    dS = diag(U' * dA * V)[1:length(S)]
+    temp2 = V' * dA' * U * Diagonal(S)
+    dV = V * (F .* (temp2 .+ temp2')) .+ (I - V * V') * dA' * U * Diagonal(inv.(S))
+    HyperDualArray(U, dU), HyperDualArray(S, dS), HyperDualArray(V, dV)
+end
