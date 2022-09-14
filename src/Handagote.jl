@@ -3,7 +3,6 @@ module Handagote
 using LinearAlgebra
 using OMEinsum
 using Random
-using ChainRulesCore
 using Zygote, FillArrays
 using SpecialFunctions
 import NaNMath
