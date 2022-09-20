@@ -62,8 +62,8 @@ Base.isequal(A::DualArray, x::AbstractArray) = isequal(realpart(A), x) && isequa
 Base.isequal(x::AbstractArray, A::DualArray) = isequal(A, x)
 
 Base.:-(A::DualArray) = DualArray(-realpart(A), -εpart(A))
-Base.:-(A::DualArray, B::DualArray) = DualArray(realpart(A) - realpart(B), -εpart(B))
-Base.:-(A::DualArray, B::DualArray) = DualArray(realpart(A) - realpart(B), εpart(A))
+# Base.:-(A::AbstractArray, B::DualArray) = DualArray(realpart(A) - realpart(B), -εpart(B))
+# Base.:-(A::DualArray, B::AbstractArray) = DualArray(realpart(A) - realpart(B), εpart(A))
 Base.:-(A::DualArray, B::DualArray) = DualArray(realpart(A) - realpart(B), εpart(A) - εpart(B))
 
 Base.:+(A::DualArray, B::DualArray) = DualArray(realpart(A) + realpart(B), εpart(A) + εpart(B))
