@@ -194,7 +194,7 @@ Base.:(==)(h₁::HyperDual, h₂::HyperDual) = hyperrealpart(h₁) == hyperrealp
 Base.:(==)(h::HyperDual, x::Number) = hyperrealpart(h) == x
 Base.:(==)(x::Number, h::HyperDual) = h == x
 
-Base.isequal(h₁::HyperDual, h₂::HyperDual) = isequal(hyperrealpart(h₁),hyperrealpart(h₂)) && isequal(ε₁part(h₁), ε₁part(h₂)) && isequal(ε₂part(h₁), ε₂part(h₂)) && isequal(ε₁ε₂part(h₁), ε₁ε₂part(h₂))
+Base.isequal(h₁::HyperDual, h₂::HyperDual) = isequal(hyperrealpart(h₁), hyperrealpart(h₂)) && isequal(ε₁part(h₁), ε₁part(h₂)) && isequal(ε₂part(h₁), ε₂part(h₂)) && isequal(ε₁ε₂part(h₁), ε₁ε₂part(h₂))
 Base.isequal(h::HyperDual, x::Number) = isequal(hyperrealpart(h), x) && isequal(ε₁part(h), zero(x)) && isequal(ε₂part(h), zero(x)) && isequal(ε₁ε₂part(h), zero(x))
 Base.isequal(x::Number, h::HyperDual) = isequal(h, x)
 

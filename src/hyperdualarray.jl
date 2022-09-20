@@ -75,18 +75,18 @@ function Base.setindex!(A::HyperDualArray, X, inds...)
     setindex!(ɛ₁ε₂part(A), ɛ₁ε₂part(X), inds...)
 end
 
-Base.:(==)(A::HyperDualArray, B::HyperDualArray) = realpart(A) == realpart(B)
-Base.:(==)(A::HyperDualArray, x::AbstractArray) = realpart(A) == x
-Base.:(==)(x::AbstractArray, h::HyperDualArray) = h == x
+Base.:(==)(A::HyperDualArray, B::HyperDualArray) = hyperrealpart(A) == hyperrealpart(B)
+Base.:(==)(A::HyperDualArray, x::AbstractArray) = hyperrealpart(A) == x
+Base.:(==)(x::AbstractArray, A::HyperDualArray) = A == x
 
-Base.isequal(A::HyperDualArray, B::HyperDualArray) = isequal(realpart(A), realpart(B)) && isequal(εpart(A), εpart(B))
-Base.isequal(A::HyperDualArray, x::AbstractArray) = isequal(realpart(A), x) && isequal(εpart(A), zero(x))
+Base.isequal(A::HyperDualArray, B::HyperDualArray) = isequal(hyperrealpart(A), hyperrealpart(B)) && isequal(ε₁part(A), ε₁part(B)) && isequal(ε₂part(A), ε₂part(B)) && isequal(ε₁ε₂part(A), ε₁ε₂part(B))
+Base.isequal(A::HyperDualArray, x::AbstractArray) = isequal(hyperrealpart(A), x) && isequal(ε₁part(A), zero.(x)) && isequal(ε₂part(A), zero.(x)) && isequal(ε₁ε₂part(A), zero.(x))
 Base.isequal(x::AbstractArray, A::HyperDualArray) = isequal(A, x)
 
-Base.:-(A::HyperDualArray) = HyperDualArray(-realpart(A), -εpart(A))
-Base.:-(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) - realpart(B), εpart(A) - εpart(B))
+Base.:-(A::HyperDualArray) = HyperDualArray(-hyperrealpart(A), -ε₁part(A), -ε₂part(A), -ε₁ε₂part(A))
+Base.:-(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(hyperrealpart(A) - hyperrealpart(B), ε₁part(A) - ε₁part(B), ε₂part(A) - ε₂part(B), ε₁ε₂part(A) - ε₁ε₂part(B))
 
-Base.:+(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(realpart(A) + realpart(B), εpart(A) + εpart(B))
+Base.:+(A::HyperDualArray, B::HyperDualArray) = HyperDualArray(hyperrealpart(A) + hyperrealpart(B), ε₁part(A) + ε₁part(B), ε₂part(A) + ε₂part(B), ε₁ε₂part(A) + ε₁ε₂part(B))
 
 function apply_scalar_hyper(f, args::Vararg{Any, N}; kwargs...) where N
     if any(ishyperdualarray, args)
