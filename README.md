@@ -42,6 +42,14 @@ In the future, we will change everything to Diffractor.jl backend.
 
 MIT
 
+## Citation
+
+If you write a paper using this package, please cite the following paper as well.
+
+`Masahiko G. Yamada et al., arXiv:2212.13267 (2022).`
+
+https://arxiv.org/abs/2212.13267
+
 ## Author
 
 * Masahiko G. Yamada
